@@ -41,6 +41,7 @@ export function App() {
   };
 
   const onMeet = !!tab?.url?.startsWith("https://meet.google.com/");
+  const capturable = !!tab?.url && /^https?:/.test(tab.url);
   const running = status.state === "active" || status.state === "connecting";
 
   const toggle = async () => {
@@ -125,12 +126,19 @@ export function App() {
       <button
         type="button"
         class={`primary ${running ? "stop" : ""}`}
-        disabled={busy || (!running && !onMeet) || settings.sourceLang === settings.targetLang}
+        disabled={busy || (!running && !capturable) || settings.sourceLang === settings.targetLang}
         onClick={toggle}
       >
-        {running ? "Stop translating" : "Translate this call"}
+        {running ? "Stop translating" : onMeet ? "Translate this call" : "Translate this tab"}
       </button>
-      {!onMeet && !running && <div class="hint">Open a Google Meet tab, then click Translate.</div>}
+      {!capturable && !running && (
+        <div class="hint">
+          Open a Google Meet call (or any tab playing speech), then click Translate.
+        </div>
+      )}
+      {capturable && !onMeet && !running && (
+        <div class="hint">Works on any tab with audio; in-call captions overlay is Meet-only.</div>
+      )}
       {(error || status.error) && <div class="error">{error ?? status.error}</div>}
 
       {running && (
