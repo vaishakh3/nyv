@@ -1,0 +1,27 @@
+{
+  "name": "@parley/extension",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "worklets": "pnpm --filter @parley/audio build && node scripts/copy-worklets.mjs",
+    "dev": "pnpm worklets && wxt",
+    "build": "pnpm worklets && wxt build",
+    "zip": "pnpm worklets && wxt zip",
+    "postinstall": "wxt prepare",
+    "typecheck": "wxt prepare && tsc --noEmit -p .",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@parley/audio": "workspace:*",
+    "@parley/protocol": "workspace:*",
+    "preact": "^10.25.0"
+  },
+  "devDependencies": {
+    "@preact/preset-vite": "^2.9.0",
+    "@types/chrome": "^0.0.287",
+    "typescript": "^5.7.0",
+    "vitest": "^3.2.0",
+    "wxt": "^0.20.0"
+  }
+}

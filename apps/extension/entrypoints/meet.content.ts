@@ -1,0 +1,78 @@
+import type { Caption, ContentMessage, Status } from "../lib/messages.js";
+
+/** Bilingual caption overlay on meet.google.com, isolated in a shadow root so Meet's CSS cannot touch it. */
+export default defineContentScript({
+  matches: ["https://meet.google.com/*"],
+  runAt: "document_idle",
+  main() {
+    const host = document.createElement("div");
+    host.id = "parley-captions-host";
+    const root = host.attachShadow({ mode: "closed" });
+    root.innerHTML = `
+      <style>
+        :host { all: initial; }
+        .wrap { position: fixed; left: 50%; bottom: 96px; transform: translateX(-50%); z-index: 2147483646;
+          max-width: min(860px, 80vw); pointer-events: none; display: flex; flex-direction: column; gap: 6px; align-items: center;
+          font-family: "Google Sans", Roboto, system-ui, sans-serif; transition: opacity .25s; opacity: 0; }
+        .wrap.show { opacity: 1; }
+        .line { background: rgba(20,20,24,.82); color: #fff; border-radius: 12px; padding: 10px 16px; line-height: 1.35;
+          box-shadow: 0 6px 24px rgba(0,0,0,.35); backdrop-filter: blur(6px); text-align: center; }
+        .target { font-size: 22px; font-weight: 500; }
+        .target .pending { opacity: .55; }
+        .source { font-size: 14px; color: rgba(255,255,255,.72); }
+        .badge { position: fixed; top: 12px; right: 12px; z-index: 2147483646; font: 500 12px/1 "Google Sans", Roboto, system-ui, sans-serif;
+          color: #fff; background: rgba(20,20,24,.82); border-radius: 999px; padding: 7px 12px; display: flex; gap: 8px; align-items: center;
+          pointer-events: none; opacity: 0; transition: opacity .25s; }
+        .badge.show { opacity: 1; }
+        .dot { width: 8px; height: 8px; border-radius: 50%; background: #34a853; box-shadow: 0 0 0 0 rgba(52,168,83,.6); animation: pulse 1.6s infinite; }
+        .dot.err { background: #ea4335; animation: none; }
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(52,168,83,.6);} 100% { box-shadow: 0 0 0 10px rgba(52,168,83,0);} }
+      </style>
+      <div class="badge"><span class="dot"></span><span class="label">Parley</span></div>
+      <div class="wrap"><div class="line target"></div><div class="line source"></div></div>`;
+    document.documentElement.appendChild(host);
+
+    const wrap = root.querySelector<HTMLElement>(".wrap") as HTMLElement;
+    const target = root.querySelector<HTMLElement>(".target") as HTMLElement;
+    const source = root.querySelector<HTMLElement>(".source") as HTMLElement;
+    const badge = root.querySelector<HTMLElement>(".badge") as HTMLElement;
+    const dot = root.querySelector<HTMLElement>(".dot") as HTMLElement;
+    const label = root.querySelector<HTMLElement>(".label") as HTMLElement;
+
+    let hideTimer: ReturnType<typeof setTimeout> | undefined;
+    const render = (c: Caption) => {
+      target.innerHTML = c.final
+        ? escapeHtml(c.target)
+        : `${escapeHtml(c.target)}<span class="pending">…</span>`;
+      source.textContent = c.source;
+      source.style.display = c.source ? "" : "none";
+      wrap.classList.add("show");
+      if (hideTimer) clearTimeout(hideTimer);
+      hideTimer = setTimeout(() => wrap.classList.remove("show"), c.final ? 4500 : 8000);
+    };
+    const renderStatus = (s: Status) => {
+      badge.classList.toggle("show", s.state !== "idle");
+      dot.classList.toggle("err", s.state === "error");
+      label.textContent =
+        s.state === "active"
+          ? `Parley · ${s.latency ? `${(s.latency.p50 / 1000).toFixed(1)}s` : "listening"}${s.rate > 1.02 ? ` · ${s.rate.toFixed(2)}×` : ""}`
+          : s.state === "error"
+            ? `Parley · ${s.error ?? "error"}`
+            : "Parley · connecting";
+      if (s.state === "idle") wrap.classList.remove("show");
+    };
+
+    chrome.runtime.onMessage.addListener((m: ContentMessage) => {
+      if (m.type === "caption") render(m.caption);
+      else renderStatus(m.status);
+    });
+    chrome.runtime
+      .sendMessage({ type: "getStatus" })
+      .then((s: Status | undefined) => s && renderStatus(s))
+      .catch(() => {});
+  },
+});
+
+function escapeHtml(s: string): string {
+  return s.replace(/[&<>"']/g, (ch) => `&#${ch.charCodeAt(0)};`);
+}

@@ -1,0 +1,194 @@
+:root {
+  color-scheme: light dark;
+  --bg: #0f1115;
+  --card: #171a21;
+  --fg: #e8eaf0;
+  --muted: #8a90a2;
+  --accent: #6c8cff;
+  --ok: #34c77b;
+  --err: #ff5d5d;
+  --border: #262a35;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  width: 340px;
+  background: var(--bg);
+  color: var(--fg);
+  font:
+    14px / 1.4 "Google Sans",
+    Inter,
+    system-ui,
+    sans-serif;
+}
+.app {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+h1 {
+  margin: 0;
+  font-size: 18px;
+  letter-spacing: 0.2px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.logo {
+  width: 22px;
+  height: 22px;
+  border-radius: 7px;
+  background: linear-gradient(135deg, var(--accent), #b26cff);
+  display: inline-block;
+}
+.pill {
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.pill .dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--muted);
+}
+.pill.active .dot {
+  background: var(--ok);
+}
+.pill.error .dot {
+  background: var(--err);
+}
+.pill.connecting .dot {
+  background: var(--accent);
+}
+.langs {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 8px;
+  align-items: end;
+}
+.swap {
+  background: var(--card);
+  border: 1px solid var(--border);
+  color: var(--fg);
+  border-radius: 8px;
+  width: 34px;
+  height: 36px;
+  cursor: pointer;
+}
+label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+select,
+input {
+  background: var(--card);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font: inherit;
+  width: 100%;
+}
+.primary {
+  background: var(--accent);
+  color: #fff;
+  border: 0;
+  border-radius: 10px;
+  padding: 12px;
+  font: 600 15px / 1 inherit;
+  cursor: pointer;
+}
+.primary.stop {
+  background: #2a2e3a;
+}
+.primary:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.stat {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 8px 10px;
+}
+.stat b {
+  display: block;
+  font-size: 16px;
+  font-weight: 600;
+}
+.stat span {
+  font-size: 11px;
+  color: var(--muted);
+}
+.caption {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  min-height: 64px;
+}
+.caption .t {
+  font-size: 15px;
+}
+.caption .s {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 4px;
+}
+.error {
+  color: var(--err);
+  font-size: 12px;
+}
+.hint {
+  color: var(--muted);
+  font-size: 12px;
+}
+details summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 12px;
+}
+details div {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--muted);
+  text-transform: none;
+  letter-spacing: 0;
+  flex-direction: row;
+}
+.row input {
+  width: auto;
+}
