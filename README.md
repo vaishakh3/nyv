@@ -64,6 +64,12 @@ TTS_PROVIDER=elevenlabs ELEVENLABS_API_KEY=...
 
 Then `pnpm --filter @nyv/relay dev`, and benchmark with a real recording: `pnpm bench --wav sample-16k.wav`.
 
+## Landing page (`apps/web`)
+
+Static Vite site for [nyv.si](https://nyv.si): `pnpm --filter @nyv/web dev` / `build` (output `apps/web/dist`).
+Deployed by connecting the repo to Vercel with **Root Directory = `apps/web`** (framework preset: Vite;
+`apps/web/vercel.json` adds security + cache headers). No build step runs at the repo root.
+
 ## Benchmark & gate
 
 `pnpm bench --runs 3 --baseline tools/bench/baseline.json --tolerance 0.10` prints per-hop percentiles and
