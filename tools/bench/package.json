@@ -1,0 +1,21 @@
+{
+  "name": "@parley/bench",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node --env-file-if-exists=../../.env --import tsx src/main.ts",
+    "typecheck": "tsc --noEmit -p .",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@parley/core": "workspace:*",
+    "@parley/protocol": "workspace:*",
+    "@parley/providers": "workspace:*"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.2.0"
+  }
+}
