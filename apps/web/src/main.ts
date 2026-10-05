@@ -82,6 +82,7 @@ function wave(): void {
 
 function reveal(): void {
   const els = document.querySelectorAll("section > *, .pipeline li, .lang-grid li, .rm > div");
+  if (!("IntersectionObserver" in window)) return;
   for (const el of els) el.classList.add("reveal");
   const io = new IntersectionObserver(
     (entries) => {
