@@ -83,6 +83,24 @@ off by default because Deepgram emits interims ~1 s apart: the closing words of 
 the final itself, so the hypothesis never matches (0 % hit rate in our runs). It is kept for ASR vendors
 with finer-grained interims, where it hides the MT hop entirely.
 
+## Running the relay in production
+
+The relay is a single stateless Node process (one WebSocket per call); scale horizontally behind any
+TLS-terminating proxy. `apps/relay/Dockerfile` builds a ~200 MB image, `apps/relay/fly.toml` deploys it
+(`fly deploy -c apps/relay/fly.toml` from the repo root, after `fly secrets set` for the vendor keys).
+
+| env | default | purpose |
+|---|---|---|
+| `RELAY_TOKENS` | _(open)_ | comma-separated bearer tokens; clients send `?token=` (the extension's **Relay token** field) |
+| `ALLOWED_ORIGINS` | _(any)_ | comma-separated `Origin` allow-list, e.g. `chrome-extension://<id>` |
+| `MAX_SESSIONS` / `MAX_SESSIONS_PER_IP` | 50 / 3 | concurrency caps (vendor quotas, abuse) |
+| `MAX_SESSION_MINUTES` / `IDLE_MINUTES` | 180 / 5 | hard session lifetime; stop when no audio arrives |
+| `TRUST_PROXY` | off | take the client IP from `X-Forwarded-For` |
+
+Endpoints: `GET /healthz`, `GET /metrics` (Prometheus text: sessions, segments, rejections, perceived-latency
+p50/p95/p99 over the last 2000 segments; bearer-protected when `RELAY_TOKENS` is set), `WS /v1/session`.
+Logs are one JSON object per line; each `session.stop` carries the session's segment count and p50.
+
 ## Benchmark & gate
 
 `pnpm bench --runs 3 --baseline tools/bench/baseline.json --tolerance 0.10` prints per-hop percentiles and

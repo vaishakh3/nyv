@@ -8,7 +8,7 @@ import {
 } from "@nyv/audio";
 import type { AudioFrame, ServerMessage } from "@nyv/protocol";
 import { type Caption, IDLE_STATUS, type Settings, type Status } from "./messages.js";
-import { RelayClient } from "./relay-client.js";
+import { RelayClient, relayUrlWithToken } from "./relay-client.js";
 
 export interface EngineEvents {
   onStatus(status: Status): void;
@@ -70,7 +70,7 @@ export class Engine {
       this.playback.port.onmessage = (e: MessageEvent<PlaybackWorkletMessage>) =>
         this.onPlayback(e.data);
 
-      this.relay = new RelayClient(settings.relayUrl, {
+      this.relay = new RelayClient(relayUrlWithToken(settings.relayUrl, settings.relayToken), {
         onMessage: (m) => this.onRelayMessage(m),
         onAudio: (f) => this.onRelayAudio(f),
         onClose: (reason) => {

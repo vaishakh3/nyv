@@ -176,6 +176,16 @@ export function App() {
               onChange={(e) => update({ relayUrl: (e.currentTarget as HTMLInputElement).value })}
             />
           </label>
+          <label>
+            Relay token
+            <input
+              type="password"
+              value={settings.relayToken}
+              disabled={running}
+              placeholder="only if the relay requires one"
+              onChange={(e) => update({ relayToken: (e.currentTarget as HTMLInputElement).value })}
+            />
+          </label>
         </div>
       </details>
     </div>

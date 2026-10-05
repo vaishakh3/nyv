@@ -15,6 +15,14 @@ export interface RelayClientEvents {
 }
 
 /** Thin WebSocket client: binary frames out/in, JSON control, clock offset via ping/pong. */
+/** Appends the relay token as a query parameter (browsers cannot set headers on WebSocket upgrades). */
+export function relayUrlWithToken(url: string, token: string): string {
+  if (!token) return url;
+  const u = new URL(url);
+  u.searchParams.set("token", token);
+  return u.toString();
+}
+
 export class RelayClient {
   private ws: WebSocket | undefined;
   private seq = 0;
