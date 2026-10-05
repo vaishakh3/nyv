@@ -86,7 +86,7 @@ with finer-grained interims, where it hides the MT hop entirely.
 ## Running the relay in production
 
 The relay is a single stateless Node process (one WebSocket per call); scale horizontally behind any
-TLS-terminating proxy. `apps/relay/Dockerfile` builds a ~200 MB image, `apps/relay/fly.toml` deploys it
+TLS-terminating proxy. `apps/relay/Dockerfile` builds a ~150 MB image, `apps/relay/fly.toml` deploys it
 (`fly deploy -c apps/relay/fly.toml` from the repo root, after `fly secrets set` for the vendor keys).
 
 | env | default | purpose |
