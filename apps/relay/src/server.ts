@@ -80,9 +80,13 @@ export class RelayServer {
     this.log("ws.open", { connId, ip });
     let seq = 0;
     let lastAudioAt = Date.now();
+    const observed = new Set<number>();
     const timers: ReturnType<typeof setTimeout>[] = [];
     const send = (m: ServerMessage) => {
-      if (m.type === "trace") this.metrics.observe(m.hops);
+      if (m.type === "trace" && m.hops.playbackStart !== undefined && !observed.has(m.segmentId)) {
+        observed.add(m.segmentId);
+        this.metrics.observe(m.hops);
+      }
       if (m.type === "error") this.metrics.errorsTotal++;
       if (ws.readyState === ws.OPEN) ws.send(JSON.stringify(m));
     };

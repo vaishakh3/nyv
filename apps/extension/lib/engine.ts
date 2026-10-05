@@ -30,6 +30,8 @@ export class Engine {
   private status: Status = { ...IDLE_STATUS };
   private readonly captions = new Map<number, Caption>();
   private latencies: number[] = [];
+  /** Segments already counted toward the latency readout (the relay re-sends trace on each hop). */
+  private readonly traced = new Set<number>();
   private duckTimer: ReturnType<typeof setInterval> | undefined;
   private statusTimer: ReturnType<typeof setTimeout> | undefined;
 
@@ -111,6 +113,7 @@ export class Engine {
     this.outResampler = undefined;
     this.captions.clear();
     this.latencies = [];
+    this.traced.clear();
     if (this.ctx) {
       const ctx = this.ctx;
       this.ctx = undefined;
@@ -168,7 +171,12 @@ export class Engine {
         break;
       }
       case "trace":
-        if (m.hops.playbackStart !== undefined && m.hops.speechEnd !== undefined) {
+        if (
+          m.hops.playbackStart !== undefined &&
+          m.hops.speechEnd !== undefined &&
+          !this.traced.has(m.segmentId)
+        ) {
+          this.traced.add(m.segmentId);
           const e2e = m.hops.playbackStart - m.hops.speechEnd;
           this.latencies.push(e2e);
           if (this.latencies.length > 50) this.latencies.shift();
