@@ -31,6 +31,10 @@ export interface HopDurations {
   asr?: number;
   /** asrFinal → mtFirstToken */
   mtFirstToken?: number;
+  /** asrFinal − mtStart: how far ahead of the final transcript the translation was requested (speculation). */
+  mtLead?: number;
+  /** mtStart → mtFirstToken: the vendor's time to first token. */
+  mtTtft?: number;
   /** asrFinal → mtDone */
   mt?: number;
   /** mtFirstToken → ttsFirstByte */
@@ -48,6 +52,10 @@ export function durations(h: HopTimings): HopDurations {
   if (asr !== undefined) out.asr = asr;
   const mtf = d(h.asrFinal, h.mtFirstToken);
   if (mtf !== undefined) out.mtFirstToken = mtf;
+  const lead = d(h.mtStart, h.asrFinal);
+  if (lead !== undefined) out.mtLead = lead;
+  const ttft = d(h.mtStart, h.mtFirstToken);
+  if (ttft !== undefined) out.mtTtft = ttft;
   const mt = d(h.asrFinal, h.mtDone);
   if (mt !== undefined) out.mt = mt;
   const ttsf = d(h.mtFirstToken, h.ttsFirstByte);

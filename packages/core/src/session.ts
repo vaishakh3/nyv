@@ -22,6 +22,26 @@ export interface SessionOptions {
   providers: Providers;
   clock?: Clock;
   segmenter?: SegmenterOptions;
+  /**
+   * Translate stable partial hypotheses before the segment closes, adopting the result when the final
+   * transcript matches. Only pays off with ASR vendors whose last interim equals the final (Deepgram
+   * nova-3 emits interims ~1 s apart, so the closing words first appear in the final itself → off by default).
+   */
+  speculative?: boolean;
+  /** Wait this long after the hypothesis last changed before speculating on it. */
+  speculationDebounceMs?: number;
+}
+
+/** An MT request fired on a partial hypothesis; adopted if the final text matches, else aborted. */
+interface Speculation {
+  segmentId: number;
+  text: string;
+  startedAt: number;
+  tokens: string[];
+  sink: ((token: string) => void) | undefined;
+  failed: boolean;
+  result: Promise<string>;
+  abort: AbortController;
 }
 
 /**
@@ -43,6 +63,13 @@ export class TranslationSession {
   private _state: SessionState = "idle";
   /** Audio that arrived while the ASR socket was still opening; replayed once active. */
   private pendingAudio: Int16Array[] = [];
+  private readonly speculative: boolean;
+  private readonly speculationDebounceMs: number;
+  private speculation: Speculation | undefined;
+  private speculationTimer: ReturnType<typeof setTimeout> | undefined;
+  /** Segments whose translation was adopted from a speculation (for the bench/report). */
+  speculationHits = 0;
+  speculationMisses = 0;
 
   constructor(
     opts: SessionOptions,
@@ -55,6 +82,8 @@ export class TranslationSession {
     this.tracer = new Tracer(this.clock);
     this.timeline = new AudioTimeline(this.cfg.inputSampleRate);
     this.context = new ContextWindow(this.cfg.glossary);
+    this.speculative = opts.speculative ?? false;
+    this.speculationDebounceMs = opts.speculationDebounceMs ?? 120;
     this.sequencer = new AudioSequencer(
       {
         onSegmentStart: (segmentId) => this.emit({ type: "segment.audio.start", segmentId }),
@@ -68,8 +97,11 @@ export class TranslationSession {
     );
     this.segmenter = new Segmenter(
       {
-        onProgress: ({ id, committed, text }) =>
-          this.emit({ type: "transcript", segmentId: id, text, committed, final: false }),
+        onProgress: ({ id, committed, text }) => {
+          this.emit({ type: "transcript", segmentId: id, text, committed, final: false });
+          if (committed.length > 0) this.warmTts();
+          this.scheduleSpeculation(id, text);
+        },
         onSegment: (seg) => this.onSegment(seg),
       },
       this.clock,
@@ -145,6 +177,7 @@ export class TranslationSession {
     this._state = "stopping";
     this.segmenter.flush();
     this.segmenter.dispose();
+    this.dropSpeculation();
     this.asr?.close();
     this.asr = undefined;
     await Promise.allSettled([...this.inflight]);
@@ -165,6 +198,90 @@ export class TranslationSession {
       return;
     }
     this.segmenter.handle(event);
+  }
+
+  private scheduleSpeculation(segmentId: number, text: string): void {
+    if (!this.speculative || this._state !== "active") return;
+    if (text.trim().split(/\s+/).length < 2) return;
+    const cur = this.speculation;
+    if (cur && cur.segmentId === segmentId && sameWords(cur.text, text)) return;
+    if (this.speculationTimer !== undefined) clearTimeout(this.speculationTimer);
+    this.speculationTimer = setTimeout(() => {
+      this.speculationTimer = undefined;
+      this.startSpeculation(segmentId, text);
+    }, this.speculationDebounceMs);
+  }
+
+  private startSpeculation(segmentId: number, text: string): void {
+    if (this._state !== "active") return;
+    this.dropSpeculation();
+    const abort = new AbortController();
+    const s: Speculation = {
+      segmentId,
+      text,
+      startedAt: this.clock.now(),
+      tokens: [],
+      sink: undefined,
+      failed: false,
+      abort,
+      result: Promise.resolve(""),
+    };
+    s.result = this.providers.mt
+      .translate(
+        {
+          text,
+          sourceLang: this.sourceLang,
+          targetLang: this.targetLang,
+          context: this.context.snapshot(),
+        },
+        (token) => {
+          s.tokens.push(token);
+          s.sink?.(token);
+        },
+        abort.signal,
+      )
+      .catch((err: unknown) => {
+        s.failed = true;
+        throw err;
+      });
+    s.result.catch(() => undefined);
+    this.speculation = s;
+  }
+
+  /** Someone is speaking: get the TTS connection ready so the first byte is not behind a handshake. */
+  private warmTts(): void {
+    this.providers.tts.warm?.(
+      this.cfg.voice
+        ? { language: this.targetLang, voice: this.cfg.voice }
+        : { language: this.targetLang },
+    );
+  }
+
+  /** Hand the in-flight speculation to the closed segment if it was translating the same words. */
+  private takeSpeculation(seg: Segment): Speculation | undefined {
+    if (this.speculationTimer !== undefined) {
+      clearTimeout(this.speculationTimer);
+      this.speculationTimer = undefined;
+    }
+    const s = this.speculation;
+    this.speculation = undefined;
+    if (!s) return undefined;
+    if (s.segmentId === seg.id && !s.failed && speculationMatches(s.text, seg.text)) {
+      this.speculationHits++;
+      return s;
+    }
+    this.speculationMisses++;
+    s.abort.abort();
+    return undefined;
+  }
+
+  private dropSpeculation(): void {
+    if (this.speculationTimer !== undefined) {
+      clearTimeout(this.speculationTimer);
+      this.speculationTimer = undefined;
+    }
+    this.speculation?.abort.abort();
+    this.speculation = undefined;
   }
 
   private onSegment(seg: Segment): void {
@@ -189,6 +306,7 @@ export class TranslationSession {
       final: true,
     });
 
+    const spec = this.takeSpeculation(seg);
     const slot = this.sequencer.open(id);
     const queue = new TextQueue();
     const ttsOpts = this.cfg.voice
@@ -202,21 +320,30 @@ export class TranslationSession {
       .then(() => this.tracer.mark(id, "ttsDone"));
 
     let translation = "";
+    const onToken = (token: string) => {
+      this.tracer.mark(id, "mtFirstToken");
+      translation += token;
+      queue.push(token);
+      this.emit({ type: "translation", segmentId: id, text: translation, final: false });
+    };
     try {
-      translation = await this.providers.mt.translate(
-        {
-          text: seg.text,
-          sourceLang: this.sourceLang,
-          targetLang: this.targetLang,
-          context: this.context.snapshot(),
-        },
-        (token) => {
-          this.tracer.mark(id, "mtFirstToken");
-          translation += token;
-          queue.push(token);
-          this.emit({ type: "translation", segmentId: id, text: translation, final: false });
-        },
-      );
+      if (spec) {
+        this.tracer.mark(id, "mtStart", spec.startedAt);
+        for (const t of spec.tokens) onToken(t);
+        spec.sink = onToken;
+        translation = await spec.result;
+      } else {
+        this.tracer.mark(id, "mtStart");
+        translation = await this.providers.mt.translate(
+          {
+            text: seg.text,
+            sourceLang: this.sourceLang,
+            targetLang: this.targetLang,
+            context: this.context.snapshot(),
+          },
+          onToken,
+        );
+      }
       this.tracer.mark(id, "mtDone");
       this.emit({ type: "translation", segmentId: id, text: translation, final: true });
       this.context.push(seg.text, translation);
@@ -236,6 +363,25 @@ export class TranslationSession {
   private emit(message: ServerMessage): void {
     this.handlers.onMessage(message);
   }
+}
+
+const normalizeWords = (text: string): string[] =>
+  text
+    .toLowerCase()
+    .split(/\s+/)
+    .map((w) => w.replace(/[^\p{L}\p{N}]/gu, ""))
+    .filter((w) => w.length > 0);
+
+function sameWords(a: string, b: string): boolean {
+  const x = normalizeWords(a);
+  const y = normalizeWords(b);
+  return x.length === y.length && x.every((w, i) => w === y[i]);
+}
+
+/** Same words, and the hypothesis already knew it was a question if the final turned out to be one. */
+function speculationMatches(hypothesis: string, final: string): boolean {
+  if (!sameWords(hypothesis, final)) return false;
+  return !final.trimEnd().endsWith("?") || hypothesis.trimEnd().endsWith("?");
 }
 
 function describe(err: unknown): string {

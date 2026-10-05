@@ -5,6 +5,11 @@ export interface OpenAiMtOptions {
   apiKey: string;
   model?: string;
   baseUrl?: string;
+  /** Prefix for the provider name, e.g. "groq". */
+  label?: string;
+  /** Extra JSON merged into the request body (e.g. `reasoning_effort` for gpt-oss models). */
+  extraBody?: Record<string, unknown>;
+  maxTokens?: number;
 }
 
 /**
@@ -15,7 +20,7 @@ export class OpenAiMtProvider implements MtProvider {
   readonly name: string;
   constructor(private readonly opts: OpenAiMtOptions) {
     if (!opts.apiKey) throw new Error("OPENAI_API_KEY is required");
-    this.name = `openai:${opts.model ?? "gpt-4o-mini"}`;
+    this.name = `${opts.label ?? "openai"}:${opts.model ?? "gpt-4o-mini"}`;
   }
 
   async translate(
@@ -35,6 +40,8 @@ export class OpenAiMtProvider implements MtProvider {
           model: this.opts.model ?? "gpt-4o-mini",
           stream: true,
           temperature: 0.2,
+          max_tokens: this.opts.maxTokens ?? 400,
+          ...this.opts.extraBody,
           messages: buildMessages(req),
         }),
         ...(signal ? { signal } : {}),

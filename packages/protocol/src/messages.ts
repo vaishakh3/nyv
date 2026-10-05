@@ -46,6 +46,8 @@ export const hopTimings = z.object({
   speechStart: z.number().optional(),
   speechEnd: z.number().optional(),
   asrFinal: z.number().optional(),
+  /** When the MT request was sent; earlier than asrFinal when translated speculatively from partials. */
+  mtStart: z.number().optional(),
   mtFirstToken: z.number().optional(),
   mtDone: z.number().optional(),
   ttsFirstByte: z.number().optional(),

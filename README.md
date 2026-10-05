@@ -3,7 +3,7 @@
 Real-time speech-to-speech translation for video calls. One participant speaks English; the other hears
 Hindi (or Spanish, French, German, Japanese, Portuguese) about a second and a half later, with bilingual captions.
 
-**Status: v0 — working end-to-end against mock providers; vendor adapters written, pending API keys.**
+**Status: v0.2 — runs end-to-end on real vendors (Deepgram → Groq → ElevenLabs) at ~1.0 s p50 phrase-end → translated audio.**
 
 ## How it works
 
@@ -11,7 +11,7 @@ Hindi (or Spanish, French, German, Japanese, Portuguese) about a second and a ha
 Meet tab audio ─► capture worklet (16 kHz, VAD) ─► WebSocket ─► relay ─► streaming ASR
                                                                    │
 speakers ◄─ playback worklet (jitter buffer, catch-up) ◄─ PCM ◄── streaming TTS ◄─ LLM translation
-                                                                   (speculative, segment-pipelined)
+                                                                   (segment-pipelined, pre-warmed)
 ```
 
 The latency edge is in the pipeline, not the models:
@@ -32,7 +32,7 @@ The latency edge is in the pipeline, not the models:
 | --- | --- |
 | `packages/protocol` | Wire format: zod control messages + 16-byte binary PCM frame header |
 | `packages/core` | Provider interfaces, segmenter, LocalAgreement, `TranslationSession`, tracer |
-| `packages/providers` | `mock`, Deepgram (ASR), OpenAI-compatible (MT), ElevenLabs (TTS) adapters |
+| `packages/providers` | `mock`, Deepgram (ASR), OpenAI-compatible incl. Groq (MT), ElevenLabs (TTS) adapters |
 | `packages/audio` | Resampler, VAD, ring buffer, time stretch, ducking policy, AudioWorklets |
 | `apps/relay` | WebSocket session server (`ws://host/v1/session`), `/healthz` |
 | `apps/extension` | Chrome MV3 extension (WXT + Preact): tabCapture → offscreen engine → captions overlay |
@@ -57,12 +57,31 @@ tones and see a scripted transcript — the point is to exercise the full audio 
 Copy `.env.example` to `.env` and set:
 
 ```
-ASR_PROVIDER=deepgram   DEEPGRAM_API_KEY=...
-MT_PROVIDER=openai      OPENAI_API_KEY=...   # OPENAI_BASE_URL works for any OpenAI-compatible endpoint
-TTS_PROVIDER=elevenlabs ELEVENLABS_API_KEY=...
+ASR_PROVIDER=deepgram   DEEPGRAM_API_KEY=...   # DEEPGRAM_ENDPOINTING_MS (default 300)
+MT_PROVIDER=groq        GROQ_API_KEY=...       # GROQ_MODEL (default openai/gpt-oss-20b)
+#   or: MT_PROVIDER=openai OPENAI_API_KEY=...  # OPENAI_MODEL, OPENAI_BASE_URL for any OpenAI-compatible endpoint
+TTS_PROVIDER=elevenlabs ELEVENLABS_API_KEY=... # ELEVENLABS_VOICE_ID (free tier: premade voices only)
 ```
 
 Then `pnpm --filter @nyv/relay dev`, and benchmark with a real recording: `pnpm bench --wav sample-16k.wav`.
+
+### Measured (real vendors, 3-sentence EN clip, 2 runs each)
+
+| stack | perceived p50 | ASR final | MT first token | TTS first byte |
+|---|---|---|---|---|
+| Deepgram → **Groq gpt-oss-20b** → ElevenLabs Flash v2.5 | **0.95–1.09 s** | 515 ms | 130–280 ms | 210–235 ms |
+| Deepgram → OpenAI gpt-4o-mini → ElevenLabs Flash v2.5 | 1.47–1.78 s | 585 ms | 500–750 ms | 330–360 ms |
+
+What moved the number: the MT hop (Groq's time-to-first-token is 3–5× lower than OpenAI's for the same
+quality of Hindi), and keeping one ElevenLabs stream-input socket pre-opened per session so the first byte is
+never behind a WS + TLS handshake (`ELEVENLABS_PREWARM=0` to disable). Deepgram's `endpointing` only buys
+~50 ms between 300 and 150 ms; its post-silence processing (~250 ms) dominates the ASR hop.
+
+**Speculative MT** (`TranslationSession({ speculative: true })`, `pnpm bench --speculation`) translates
+stable partials before the segment closes and adopts the result when the final transcript matches. It is
+off by default because Deepgram emits interims ~1 s apart: the closing words of a sentence first appear in
+the final itself, so the hypothesis never matches (0 % hit rate in our runs). It is kept for ASR vendors
+with finer-grained interims, where it hides the MT hop entirely.
 
 ## Benchmark & gate
 
@@ -72,8 +91,9 @@ fails if perceived latency regresses by more than the tolerance. Update the base
 
 ## Roadmap
 
-1. **Now** — EN→HI inbound mode in Meet, mock + Deepgram/OpenAI/ElevenLabs adapters, bench gate.
-2. Provider bake-off with real keys; tune segmenter thresholds against measured p50/p95.
+1. ~~EN→HI inbound mode in Meet, mock + Deepgram/OpenAI/ElevenLabs adapters, bench gate.~~
+2. ~~Provider bake-off with real keys~~ → Groq MT, TTS pre-warm (~1.0 s p50). Next: ASR bake-off
+   (AssemblyAI / Speechmatics streaming) to attack the 500 ms ASR hop; production relay (auth, limits, metrics).
 3. Outbound mode (speak your language, they hear theirs) and the remaining launch languages.
 4. Tauri desktop app with virtual mic/speaker (works in Zoom, Teams, Discord), voice cloning.
 

@@ -19,9 +19,12 @@ export interface BenchOptions {
   /** Simulated client: jitter-buffer prime + network one-way delay added before "playback". */
   playbackDelayMs?: number;
   onLog?: (line: string) => void;
+  /** Translate from stable partials before the segment closes (default false; see TranslationSession). */
+  speculative?: boolean;
 }
 
 export interface BenchResult {
+  speculation: { hits: number; misses: number };
   report: LatencyReport;
   segments: Array<{ segmentId: number; source: string; target: string; hops: HopTimings }>;
 }
@@ -43,7 +46,12 @@ export async function runBench(o: BenchOptions): Promise<BenchResult> {
   });
 
   const session = new TranslationSession(
-    { sessionId: "bench", config: o.config, providers: o.providers },
+    {
+      sessionId: "bench",
+      config: o.config,
+      providers: o.providers,
+      speculative: o.speculative ?? false,
+    },
     {
       onMessage: (m) => {
         switch (m.type) {
@@ -105,7 +113,11 @@ export async function runBench(o: BenchOptions): Promise<BenchResult> {
       hops,
       ...(texts.get(segmentId) ?? { source: "", target: "" }),
     }));
-  return { report: summarize(traces.values()), segments };
+  return {
+    report: summarize(traces.values()),
+    segments,
+    speculation: { hits: session.speculationHits, misses: session.speculationMisses },
+  };
 }
 
 export function readWav16k(path: string): Int16Array {
@@ -136,6 +148,8 @@ export function formatReport(r: LatencyReport): string {
     ["speechEnd → playback (perceived)", r.endToEnd],
     ["speechEnd → ASR final", r.asr],
     ["ASR final → MT first token", r.mtFirstToken],
+    ["  MT lead (request before ASR final)", r.mtLead],
+    ["  MT start → first token (vendor)", r.mtTtft],
     ["ASR final → MT done", r.mt],
     ["MT first token → TTS first byte", r.ttsFirstByte],
     ["TTS first byte → playback", r.transport],

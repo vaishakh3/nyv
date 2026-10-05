@@ -1,4 +1,4 @@
-import type { ServerMessage } from "@nyv/protocol";
+import type { ServerMessage, SessionConfig } from "@nyv/protocol";
 import { describe, expect, it } from "vitest";
 import { ManualClock } from "./clock.js";
 import { wordsFromText } from "./segmenter.js";
@@ -187,5 +187,102 @@ describe("TranslationSession", () => {
     });
     await session.stop();
     expect(session.state).toBe("stopped");
+  });
+
+  const cfg: SessionConfig = {
+    sourceLang: "en",
+    targetLang: "hi",
+    direction: "inbound",
+    inputSampleRate: 16000,
+    glossary: [],
+  };
+
+  function spyMt(providers: ReturnType<typeof fakeProviders>["providers"]): string[] {
+    const calls: string[] = [];
+    const inner = providers.mt;
+    providers.mt = {
+      name: "spy-mt",
+      translate: (req, onToken, signal) => {
+        calls.push(req.text);
+        return inner.translate(req, onToken, signal);
+      },
+    };
+    return calls;
+  }
+
+  it("adopts a speculative translation when the final transcript matches the hypothesis", async () => {
+    const { providers, asrEmit } = fakeProviders();
+    const calls = spyMt(providers);
+    const warmed: string[] = [];
+    providers.tts.warm = (o) => warmed.push(o.language);
+    const messages: ServerMessage[] = [];
+    const clock = new ManualClock(0);
+    const session = new TranslationSession(
+      {
+        sessionId: "s3",
+        config: cfg,
+        providers,
+        clock,
+        speculative: true,
+        speculationDebounceMs: 0,
+      },
+      { onMessage: (m) => messages.push(m), onAudio: () => {} },
+    );
+    await session.start();
+    const words = wordsFromText("see you tomorrow", 0);
+    asrEmit({ type: "partial", text: "see you tomorrow", words });
+    asrEmit({ type: "partial", text: "see you tomorrow", words });
+    await settle();
+    expect(calls).toEqual(["see you tomorrow"]);
+    expect(warmed).toEqual(["hi"]);
+    clock.advance(400);
+    asrEmit({
+      type: "final",
+      text: "See you tomorrow.",
+      words: wordsFromText("See you tomorrow.", 0),
+      speechFinal: true,
+    });
+    await settle();
+    expect(calls).toEqual(["see you tomorrow"]);
+    expect(session.speculationHits).toBe(1);
+    const final = messages.find((m) => m.type === "translation" && m.final);
+    expect(final?.type === "translation" && final.text).toContain("SEE YOU TOMORROW");
+    const trace = messages.find((m) => m.type === "trace");
+    if (trace?.type !== "trace") throw new Error("no trace");
+    expect(trace.hops.mtStart).toBeLessThan(trace.hops.asrFinal ?? 0);
+    await session.stop();
+  });
+
+  it("discards a speculation when the final transcript differs and translates afresh", async () => {
+    const { providers, asrEmit } = fakeProviders();
+    const calls = spyMt(providers);
+    const messages: ServerMessage[] = [];
+    const session = new TranslationSession(
+      {
+        sessionId: "s4",
+        config: cfg,
+        providers,
+        clock: new ManualClock(0),
+        speculative: true,
+        speculationDebounceMs: 0,
+      },
+      { onMessage: (m) => messages.push(m), onAudio: () => {} },
+    );
+    await session.start();
+    const words = wordsFromText("does that work", 0);
+    asrEmit({ type: "partial", text: "does that work", words });
+    await settle();
+    asrEmit({
+      type: "final",
+      text: "Does that work for you?",
+      words: wordsFromText("Does that work for you?", 0),
+      speechFinal: true,
+    });
+    await settle();
+    expect(calls).toEqual(["does that work", "Does that work for you?"]);
+    expect(session.speculationMisses).toBe(1);
+    const final = messages.find((m) => m.type === "translation" && m.final);
+    expect(final?.type === "translation" && final.text).toContain("DOES THAT WORK FOR YOU?");
+    await session.stop();
   });
 });

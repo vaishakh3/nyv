@@ -76,6 +76,8 @@ export interface TtsOptions {
 export interface TtsProvider {
   readonly name: string;
   readonly outputSampleRate: number;
+  /** Optional: pre-open a connection so the next synthesize() skips the handshake. */
+  warm?(opts: TtsOptions): void;
   /**
    * Synthesizes streaming text. Implementations that accept streaming input start speaking before the
    * translation is complete; others may buffer until the iterable ends.
