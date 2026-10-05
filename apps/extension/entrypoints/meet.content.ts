@@ -6,7 +6,7 @@ export default defineContentScript({
   runAt: "document_idle",
   main() {
     const host = document.createElement("div");
-    host.id = "parley-captions-host";
+    host.id = "nyv-captions-host";
     const root = host.attachShadow({ mode: "closed" });
     root.innerHTML = `
       <style>
@@ -28,7 +28,7 @@ export default defineContentScript({
         .dot.err { background: #ea4335; animation: none; }
         @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(52,168,83,.6);} 100% { box-shadow: 0 0 0 10px rgba(52,168,83,0);} }
       </style>
-      <div class="badge"><span class="dot"></span><span class="label">Parley</span></div>
+      <div class="badge"><span class="dot"></span><span class="label">nyv</span></div>
       <div class="wrap"><div class="line target"></div><div class="line source"></div></div>`;
     document.documentElement.appendChild(host);
 
@@ -55,10 +55,10 @@ export default defineContentScript({
       dot.classList.toggle("err", s.state === "error");
       label.textContent =
         s.state === "active"
-          ? `Parley · ${s.latency ? `${(s.latency.p50 / 1000).toFixed(1)}s` : "listening"}${s.rate > 1.02 ? ` · ${s.rate.toFixed(2)}×` : ""}`
+          ? `nyv · ${s.latency ? `${(s.latency.p50 / 1000).toFixed(1)}s` : "listening"}${s.rate > 1.02 ? ` · ${s.rate.toFixed(2)}×` : ""}`
           : s.state === "error"
-            ? `Parley · ${s.error ?? "error"}`
-            : "Parley · connecting";
+            ? `nyv · ${s.error ?? "error"}`
+            : "nyv · connecting";
       if (s.state === "idle") wrap.classList.remove("show");
     };
 

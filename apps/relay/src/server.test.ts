@@ -6,8 +6,8 @@ import {
   FrameKind,
   parseServerMessage,
   type ServerMessage,
-} from "@parley/protocol";
-import { MockAsrProvider, MockMtProvider, MockTtsProvider } from "@parley/providers";
+} from "@nyv/protocol";
+import { MockAsrProvider, MockMtProvider, MockTtsProvider } from "@nyv/providers";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import WebSocket from "ws";
 import { RelayServer } from "./server.js";

@@ -6,7 +6,7 @@ import {
   parseServerMessage,
   type ServerMessage,
   type SessionConfig,
-} from "@parley/protocol";
+} from "@nyv/protocol";
 
 export interface RelayClientEvents {
   onMessage(m: ServerMessage): void;

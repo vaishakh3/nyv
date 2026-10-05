@@ -26,10 +26,10 @@ importers:
 
   apps/extension:
     dependencies:
-      '@parley/audio':
+      '@nyv/audio':
         specifier: workspace:*
         version: link:../../packages/audio
-      '@parley/protocol':
+      '@nyv/protocol':
         specifier: workspace:*
         version: link:../../packages/protocol
       preact:
@@ -54,13 +54,13 @@ importers:
 
   apps/relay:
     dependencies:
-      '@parley/core':
+      '@nyv/core':
         specifier: workspace:*
         version: link:../../packages/core
-      '@parley/protocol':
+      '@nyv/protocol':
         specifier: workspace:*
         version: link:../../packages/protocol
-      '@parley/providers':
+      '@nyv/providers':
         specifier: workspace:*
         version: link:../../packages/providers
       ws:
@@ -82,7 +82,7 @@ importers:
 
   packages/audio:
     dependencies:
-      '@parley/protocol':
+      '@nyv/protocol':
         specifier: workspace:*
         version: link:../protocol
     devDependencies:
@@ -98,7 +98,7 @@ importers:
 
   packages/core:
     dependencies:
-      '@parley/protocol':
+      '@nyv/protocol':
         specifier: workspace:*
         version: link:../protocol
     devDependencies:
@@ -124,10 +124,10 @@ importers:
 
   packages/providers:
     dependencies:
-      '@parley/core':
+      '@nyv/core':
         specifier: workspace:*
         version: link:../core
-      '@parley/protocol':
+      '@nyv/protocol':
         specifier: workspace:*
         version: link:../protocol
     devDependencies:
@@ -140,13 +140,13 @@ importers:
 
   tools/bench:
     dependencies:
-      '@parley/core':
+      '@nyv/core':
         specifier: workspace:*
         version: link:../../packages/core
-      '@parley/protocol':
+      '@nyv/protocol':
         specifier: workspace:*
         version: link:../../packages/protocol
-      '@parley/providers':
+      '@nyv/providers':
         specifier: workspace:*
         version: link:../../packages/providers
     devDependencies:

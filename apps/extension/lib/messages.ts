@@ -1,4 +1,4 @@
-import type { SessionConfig } from "@parley/protocol";
+import type { SessionConfig } from "@nyv/protocol";
 
 export type EngineState = "idle" | "connecting" | "active" | "error";
 

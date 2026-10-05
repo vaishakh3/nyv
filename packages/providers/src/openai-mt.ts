@@ -1,5 +1,5 @@
-import type { MtProvider, MtRequest } from "@parley/core";
-import { LANGUAGES, type LanguageCode } from "@parley/protocol";
+import type { MtProvider, MtRequest } from "@nyv/core";
+import { LANGUAGES, type LanguageCode } from "@nyv/protocol";
 
 export interface OpenAiMtOptions {
   apiKey: string;

@@ -46,4 +46,4 @@ class CaptureProcessor extends AudioWorkletProcessor {
   }
 }
 
-registerProcessor("parley-capture", CaptureProcessor);
+registerProcessor("nyv-capture", CaptureProcessor);

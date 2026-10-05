@@ -1,4 +1,4 @@
-import { LANGUAGES, type LanguageCode } from "@parley/protocol";
+import { LANGUAGES, type LanguageCode } from "@nyv/protocol";
 import { useEffect, useState } from "preact/hooks";
 import {
   type Caption,
@@ -68,7 +68,7 @@ export function App() {
     <div class="app">
       <header>
         <h1>
-          <span class="logo" /> Parley
+          <span class="logo" /> nyv
         </h1>
         <span class={`pill ${status.state}`}>
           <span class="dot" />

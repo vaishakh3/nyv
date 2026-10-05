@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { IncomingMessage } from "node:http";
-import type { Providers } from "@parley/core";
-import { TranslationSession } from "@parley/core";
+import type { Providers } from "@nyv/core";
+import { TranslationSession } from "@nyv/core";
 import {
   type ClientMessage,
   decodeFrame,
@@ -9,7 +9,7 @@ import {
   FrameKind,
   parseClientMessage,
   type ServerMessage,
-} from "@parley/protocol";
+} from "@nyv/protocol";
 import { type WebSocket, WebSocketServer } from "ws";
 
 export interface RelayOptions {

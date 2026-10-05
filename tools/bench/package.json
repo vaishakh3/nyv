@@ -1,5 +1,5 @@
 {
-  "name": "@parley/bench",
+  "name": "@nyv/bench",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -9,9 +9,9 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@parley/core": "workspace:*",
-    "@parley/protocol": "workspace:*",
-    "@parley/providers": "workspace:*"
+    "@nyv/core": "workspace:*",
+    "@nyv/protocol": "workspace:*",
+    "@nyv/providers": "workspace:*"
   },
   "devDependencies": {
     "tsx": "^4.19.0",
