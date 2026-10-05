@@ -85,7 +85,7 @@ export class RelayClient {
   }
 
   speechEnd(): void {
-    this.sendJson({ type: "speech.end" });
+    this.sendJson({ type: "speech.end", tsMs: performance.now() });
   }
 
   /** Report playback start in client time; converted to relay time when the clock offset is known. */
@@ -94,7 +94,7 @@ export class RelayClient {
     this.sendJson({
       type: "trace.playback",
       segmentId,
-      playbackStartTsMs: playbackStartPerfMs + this.offsetMs,
+      playbackStartTsMs: Math.max(0, playbackStartPerfMs + this.offsetMs),
       backlogMs,
     });
   }

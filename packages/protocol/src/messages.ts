@@ -27,15 +27,16 @@ export const clientMessage = z.discriminatedUnion("type", [
   z.object({ type: z.literal("session.start"), config: sessionConfig }),
   z.object({ type: z.literal("session.stop") }),
   /** Client-side VAD saw end of speech; lets the relay flush ASR early. */
-  z.object({ type: z.literal("speech.end"), tsMs: z.number().int().nonnegative() }),
+  z.object({ type: z.literal("speech.end"), tsMs: z.number().nonnegative() }),
   /** Client reports when a segment started playing. playbackStartTsMs is already converted to the relay clock using the ping/pong offset. */
   z.object({
     type: z.literal("trace.playback"),
     segmentId: z.number().int().positive(),
-    playbackStartTsMs: z.number().int().nonnegative(),
+    playbackStartTsMs: z.number().nonnegative(),
     backlogMs: z.number().nonnegative(),
   }),
-  z.object({ type: z.literal("ping"), tsMs: z.number().int().nonnegative() }),
+  /** tsMs is the client's performance.now(): fractional. */
+  z.object({ type: z.literal("ping"), tsMs: z.number().nonnegative() }),
 ]);
 export type ClientMessage = z.infer<typeof clientMessage>;
 
@@ -104,7 +105,7 @@ export const serverMessage = z.discriminatedUnion("type", [
   }),
   z.object({
     type: z.literal("pong"),
-    tsMs: z.number().int().nonnegative(),
+    tsMs: z.number().nonnegative(),
     serverTsMs: z.number(),
   }),
 ]);

@@ -179,6 +179,7 @@ export class Engine {
         break;
       case "error":
         if (m.fatal) this.setStatus({ ...this.status, state: "error", error: m.message });
+        else console.warn("[nyv] relay:", m.code, m.message);
         break;
       case "session.stopped":
         if (this.status.state === "active") void this.stop();
