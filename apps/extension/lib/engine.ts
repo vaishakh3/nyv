@@ -29,6 +29,8 @@ export class Engine {
   private outResampler: Resampler | undefined;
   private status: Status = { ...IDLE_STATUS };
   private readonly captions = new Map<number, Caption>();
+  /** Last Hindi line shown; stays on screen under the next segment's live English until that one is translated. */
+  private lastTarget: { text: string; final: boolean; at: number } | undefined;
   private latencies: number[] = [];
   /** Segments already counted toward the latency readout (the relay re-sends trace on each hop). */
   private readonly traced = new Set<number>();
@@ -147,6 +149,7 @@ export class Engine {
     this.duckGain = undefined;
     this.outResampler = undefined;
     this.captions.clear();
+    this.lastTarget = undefined;
     this.latencies = [];
     this.traced.clear();
     if (this.ctx) {
@@ -188,7 +191,7 @@ export class Engine {
         };
         c.source = m.text;
         this.captions.set(m.segmentId, c);
-        this.events.onCaption({ ...c });
+        this.publishCaption(c);
         break;
       }
       case "translation": {
@@ -201,7 +204,7 @@ export class Engine {
         c.target = m.text;
         c.final = m.final;
         this.captions.set(m.segmentId, c);
-        this.events.onCaption({ ...c });
+        this.publishCaption(c);
         if (m.final) this.captions.delete(m.segmentId);
         break;
       }
@@ -231,6 +234,21 @@ export class Engine {
       default:
         break;
     }
+  }
+
+  /**
+   * With a fast ASR the next segment's English partials arrive while the previous Hindi is still being
+   * spoken; keep that Hindi on screen (for up to 6 s) instead of blanking the target line.
+   */
+  private publishCaption(c: Caption): void {
+    const now = performance.now();
+    if (c.target) {
+      this.lastTarget = { text: c.target, final: c.final, at: now };
+      this.events.onCaption({ ...c });
+      return;
+    }
+    const held = this.lastTarget && now - this.lastTarget.at < 6000 ? this.lastTarget : undefined;
+    this.events.onCaption(held ? { ...c, target: held.text, final: held.final } : { ...c });
   }
 
   private onRelayAudio(f: AudioFrame): void {
