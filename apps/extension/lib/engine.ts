@@ -133,10 +133,27 @@ export class Engine {
       }
     }
     if (epoch !== this.epoch) return;
-    this.setStatus({ ...this.status, state: "error", error: `relay disconnected: ${reason}` });
+    await this.fail(`relay disconnected: ${reason}`);
+  }
+
+  /** Give up on this call: release the tab capture (so Start works again) and show why. */
+  private async fail(error: string): Promise<void> {
+    const keep = this.status;
+    await this.teardown();
+    this.setStatus({
+      ...IDLE_STATUS,
+      state: "error",
+      error,
+      ...(keep.latency ? { latency: keep.latency } : {}),
+    });
   }
 
   async stop(): Promise<void> {
+    await this.teardown();
+    if (this.status.state !== "idle") this.setStatus({ ...IDLE_STATUS });
+  }
+
+  private async teardown(): Promise<void> {
     this.epoch++;
     this.settings = undefined;
     if (this.duckTimer) clearInterval(this.duckTimer);
@@ -157,7 +174,6 @@ export class Engine {
       this.ctx = undefined;
       await ctx.close().catch(() => {});
     }
-    if (this.status.state !== "idle") this.setStatus({ ...IDLE_STATUS });
   }
 
   getStatus(): Status {
@@ -224,7 +240,7 @@ export class Engine {
         }
         break;
       case "error":
-        if (m.fatal) this.setStatus({ ...this.status, state: "error", error: m.message });
+        if (m.fatal) void this.fail(m.message);
         else console.warn("[nyv] relay:", m.code, m.message);
         break;
       case "session.stopped":
