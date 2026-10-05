@@ -1,0 +1,26 @@
+{
+  "name": "@nyv/audio",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./worklets/*": "./dist/worklets/*"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p .",
+    "test": "vitest run",
+    "build": "esbuild src/worklets/capture.worklet.ts src/worklets/playback.worklet.ts --bundle --format=esm --target=es2022 --outdir=dist/worklets --log-level=warning"
+  },
+  "dependencies": {
+    "@nyv/protocol": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0",
+    "vitest": "^3.2.0",
+    "esbuild": "^0.25.0"
+  }
+}
