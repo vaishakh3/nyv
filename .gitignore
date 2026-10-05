@@ -1,0 +1,14 @@
+node_modules/
+dist/
+.output/
+.wxt/
+.turbo/
+*.log
+.env
+.env.*
+!.env.example
+coverage/
+bench-results/
+apps/extension/public/worklets/
+apps/extension/.wxt/
+bench-result.json
