@@ -14,6 +14,7 @@ export interface ProviderEnv {
   OPENAI_BASE_URL?: string;
   ELEVENLABS_API_KEY?: string;
   ELEVENLABS_MODEL?: string;
+  ELEVENLABS_VOICE_ID?: string;
 }
 
 /** Builds the provider set from environment-style config. Unknown names fail loudly; "mock" always works. */
@@ -62,6 +63,7 @@ export function ttsFromEnv(env: ProviderEnv): TtsProvider {
         apiKey: env.ELEVENLABS_API_KEY ?? "",
       };
       if (env.ELEVENLABS_MODEL) o.modelId = env.ELEVENLABS_MODEL;
+      if (env.ELEVENLABS_VOICE_ID) o.defaultVoice = env.ELEVENLABS_VOICE_ID;
       return new ElevenLabsTtsProvider(o);
     }
     default:
