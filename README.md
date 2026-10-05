@@ -71,11 +71,16 @@ Then `pnpm --filter @nyv/relay dev`, and benchmark with a real recording: `pnpm 
 |---|---|---|---|---|
 | Deepgram → **Groq gpt-oss-20b** → ElevenLabs Flash v2.5 | **0.95–1.09 s** | 515 ms | 130–280 ms | 210–235 ms |
 | Deepgram → OpenAI gpt-4o-mini → ElevenLabs Flash v2.5 | 1.47–1.78 s | 585 ms | 500–750 ms | 330–360 ms |
+| Groq stack, **32 s continuous monologue** (11 sentences, few pauses) | **1.04 s** (p95 2.1 s) | 630 ms | 200 ms | 220 ms |
 
 What moved the number: the MT hop (Groq's time-to-first-token is 3–5× lower than OpenAI's for the same
 quality of Hindi), and keeping one ElevenLabs stream-input socket pre-opened per session so the first byte is
 never behind a WS + TLS handshake (`ELEVENLABS_PREWARM=0` to disable). Deepgram's `endpointing` only buys
 ~50 ms between 300 and 150 ms; its post-silence processing (~250 ms) dominates the ASR hop.
+
+The monologue is the hard case: with no pauses, Deepgram only finalizes on its own cadence, so some
+sentences wait 1.5 s for their ASR final and playback queues behind the previous (longer) Hindi sentence;
+catch-up playback then runs at up to 1.35× until the backlog drains.
 
 **Speculative MT** (`TranslationSession({ speculative: true })`, `pnpm bench --speculation`) translates
 stable partials before the segment closes and adopts the result when the final transcript matches. It is
