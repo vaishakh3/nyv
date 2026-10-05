@@ -431,12 +431,12 @@ footer {
   color: var(--muted);
   font-size: 13px;
 }
-footer span {
+.foot {
   display: inline-flex;
   align-items: center;
   gap: 8px;
 }
-footer img {
+.foot img {
   border-radius: 5px;
 }
 
