@@ -16,10 +16,14 @@ export interface ElevenLabsOptions {
 }
 
 interface WarmSocket {
+  /** `${voice}|${language}|${speed}` */
   key: string;
   ws: WebSocket;
   opened: Promise<void>;
 }
+
+const sameVoice = (a: string, b: string) =>
+  a.split("|").slice(0, 2).join("|") === b.split("|").slice(0, 2).join("|");
 
 /** "Sarah": a premade multilingual voice, usable on free-tier keys (library voices are not). */
 const DEFAULT_VOICE = "EXAVITQu4vr4xnSDxMaL";
@@ -64,7 +68,13 @@ export class ElevenLabsTtsProvider implements TtsProvider {
   ): Promise<void> {
     const key = this.keyFor(o);
     let w: WarmSocket;
-    if (this.spare && this.spare.key === key && this.spare.ws.readyState <= WebSocket.OPEN) {
+    // A spare at a different speed still beats a cold handshake on the critical path (the speed only
+    // differs by a step); the next spare is warmed at the requested speed.
+    if (
+      this.spare &&
+      sameVoice(this.spare.key, key) &&
+      this.spare.ws.readyState <= WebSocket.OPEN
+    ) {
       w = this.spare;
       this.spare = undefined;
     } else {
