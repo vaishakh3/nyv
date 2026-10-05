@@ -1,4 +1,4 @@
-import type { LanguageCode } from "@parley/protocol";
+import type { LanguageCode } from "@nyv/protocol";
 
 // ---------------- ASR ----------------
 

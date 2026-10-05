@@ -1,5 +1,5 @@
 import { createServer } from "node:http";
-import { providersFromEnv } from "@parley/providers";
+import { providersFromEnv } from "@nyv/providers";
 import { RelayServer } from "./server.js";
 
 const port = Number(process.env.PORT ?? 8787);

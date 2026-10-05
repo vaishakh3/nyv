@@ -1,4 +1,4 @@
-import type { AsrEvent, AsrProvider, AsrStartOptions, AsrStream, AsrWord } from "@parley/core";
+import type { AsrEvent, AsrProvider, AsrStartOptions, AsrStream, AsrWord } from "@nyv/core";
 import { int16ToBytes } from "./pcm.js";
 
 export interface DeepgramOptions {

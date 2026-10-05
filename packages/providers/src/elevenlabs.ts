@@ -1,5 +1,5 @@
-import type { TtsOptions, TtsProvider } from "@parley/core";
-import type { LanguageCode } from "@parley/protocol";
+import type { TtsOptions, TtsProvider } from "@nyv/core";
+import type { LanguageCode } from "@nyv/protocol";
 import { base64ToBytes, bytesToInt16 } from "./pcm.js";
 
 export interface ElevenLabsOptions {

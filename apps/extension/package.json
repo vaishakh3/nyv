@@ -1,10 +1,10 @@
 {
-  "name": "@parley/extension",
+  "name": "@nyv/extension",
   "version": "0.0.0",
   "private": true,
   "type": "module",
   "scripts": {
-    "worklets": "pnpm --filter @parley/audio build && node scripts/copy-worklets.mjs",
+    "worklets": "pnpm --filter @nyv/audio build && node scripts/copy-worklets.mjs",
     "dev": "pnpm worklets && wxt",
     "build": "pnpm worklets && wxt build",
     "zip": "pnpm worklets && wxt zip",
@@ -13,8 +13,8 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
-    "@parley/audio": "workspace:*",
-    "@parley/protocol": "workspace:*",
+    "@nyv/audio": "workspace:*",
+    "@nyv/protocol": "workspace:*",
     "preact": "^10.25.0"
   },
   "devDependencies": {

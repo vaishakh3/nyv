@@ -1,4 +1,4 @@
-import type { ServerMessage } from "@parley/protocol";
+import type { ServerMessage } from "@nyv/protocol";
 import { describe, expect, it } from "vitest";
 import { ManualClock } from "./clock.js";
 import { wordsFromText } from "./segmenter.js";

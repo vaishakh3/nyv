@@ -1,4 +1,4 @@
-# Parley
+# nyv
 
 Real-time speech-to-speech translation for video calls. One participant speaks English; the other hears
 Hindi (or Spanish, French, German, Japanese, Portuguese) about a second and a half later, with bilingual captions.
@@ -44,12 +44,12 @@ The latency edge is in the pipeline, not the models:
 corepack enable && pnpm install
 pnpm check                       # lint + typecheck + tests
 pnpm bench                       # end-to-end latency table against mock providers
-pnpm --filter @parley/relay dev  # relay on :8787 with mock providers
-pnpm --filter @parley/extension build
+pnpm --filter @nyv/relay dev  # relay on :8787 with mock providers
+pnpm --filter @nyv/extension build
 ```
 
 Load `apps/extension/dist/chrome-mv3` via `chrome://extensions` → *Load unpacked*, open a Google Meet
-(or any tab playing speech), click the Parley icon → **Translate this call**. With mock providers you will hear
+(or any tab playing speech), click the nyv icon → **Translate this call**. With mock providers you will hear
 tones and see a scripted transcript — the point is to exercise the full audio path and measure latency.
 
 ## Real providers
@@ -62,7 +62,7 @@ MT_PROVIDER=openai      OPENAI_API_KEY=...   # OPENAI_BASE_URL works for any Ope
 TTS_PROVIDER=elevenlabs ELEVENLABS_API_KEY=...
 ```
 
-Then `pnpm --filter @parley/relay dev`, and benchmark with a real recording: `pnpm bench --wav sample-16k.wav`.
+Then `pnpm --filter @nyv/relay dev`, and benchmark with a real recording: `pnpm bench --wav sample-16k.wav`.
 
 ## Benchmark & gate
 

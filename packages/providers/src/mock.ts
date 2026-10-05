@@ -9,7 +9,7 @@ import {
   type TtsOptions,
   type TtsProvider,
   wordsFromText,
-} from "@parley/core";
+} from "@nyv/core";
 import { tone } from "./pcm.js";
 
 export interface MockScriptLine {

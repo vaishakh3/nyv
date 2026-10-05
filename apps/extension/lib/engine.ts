@@ -5,8 +5,8 @@ import {
   type PlaybackWorkletCommand,
   type PlaybackWorkletMessage,
   Resampler,
-} from "@parley/audio";
-import type { AudioFrame, ServerMessage } from "@parley/protocol";
+} from "@nyv/audio";
+import type { AudioFrame, ServerMessage } from "@nyv/protocol";
 import { type Caption, IDLE_STATUS, type Settings, type Status } from "./messages.js";
 import { RelayClient } from "./relay-client.js";
 
@@ -58,11 +58,11 @@ export class Engine {
       this.duckGain = ctx.createGain();
       source.connect(this.duckGain).connect(ctx.destination);
 
-      const capture = new AudioWorkletNode(ctx, "parley-capture", { numberOfOutputs: 0 });
+      const capture = new AudioWorkletNode(ctx, "nyv-capture", { numberOfOutputs: 0 });
       source.connect(capture);
       capture.port.onmessage = (e: MessageEvent<CaptureWorkletMessage>) => this.onCapture(e.data);
 
-      this.playback = new AudioWorkletNode(ctx, "parley-playback", {
+      this.playback = new AudioWorkletNode(ctx, "nyv-playback", {
         numberOfInputs: 0,
         outputChannelCount: [1],
       });

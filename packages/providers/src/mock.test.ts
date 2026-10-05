@@ -1,4 +1,4 @@
-import { collect, TextQueue } from "@parley/core";
+import { collect, TextQueue } from "@nyv/core";
 import { describe, expect, it } from "vitest";
 import { MockAsrProvider, MockMtProvider, MockTtsProvider } from "./mock.js";
 

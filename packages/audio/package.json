@@ -1,5 +1,5 @@
 {
-  "name": "@parley/audio",
+  "name": "@nyv/audio",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -16,7 +16,7 @@
     "build": "esbuild src/worklets/capture.worklet.ts src/worklets/playback.worklet.ts --bundle --format=esm --target=es2022 --outdir=dist/worklets --log-level=warning"
   },
   "dependencies": {
-    "@parley/protocol": "workspace:*"
+    "@nyv/protocol": "workspace:*"
   },
   "devDependencies": {
     "typescript": "^5.7.0",

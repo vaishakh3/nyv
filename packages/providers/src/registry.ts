@@ -1,4 +1,4 @@
-import type { AsrProvider, MtProvider, Providers, TtsProvider } from "@parley/core";
+import type { AsrProvider, MtProvider, Providers, TtsProvider } from "@nyv/core";
 import { DeepgramAsrProvider } from "./deepgram.js";
 import { ElevenLabsTtsProvider } from "./elevenlabs.js";
 import { MockAsrProvider, MockMtProvider, MockTtsProvider } from "./mock.js";

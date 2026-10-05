@@ -1,5 +1,5 @@
 {
-  "name": "@parley/relay",
+  "name": "@nyv/relay",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -10,9 +10,9 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@parley/core": "workspace:*",
-    "@parley/protocol": "workspace:*",
-    "@parley/providers": "workspace:*",
+    "@nyv/core": "workspace:*",
+    "@nyv/protocol": "workspace:*",
+    "@nyv/providers": "workspace:*",
     "ws": "^8.18.0"
   },
   "devDependencies": {

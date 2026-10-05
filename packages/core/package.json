@@ -1,5 +1,5 @@
 {
-  "name": "@parley/core",
+  "name": "@nyv/core",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -14,7 +14,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@parley/protocol": "workspace:*"
+    "@nyv/protocol": "workspace:*"
   },
   "devDependencies": {
     "typescript": "^5.7.0",
