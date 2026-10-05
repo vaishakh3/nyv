@@ -285,4 +285,106 @@ describe("TranslationSession", () => {
     expect(final?.type === "translation" && final.text).toContain("DOES THAT WORK FOR YOU?");
     await session.stop();
   });
+
+  it("reconnects the ASR stream when the vendor socket drops, re-basing word times", async () => {
+    let starts = 0;
+    const emitters: Array<(e: AsrEvent) => void> = [];
+    const sent: number[][] = [];
+    const asr: AsrProvider = {
+      name: "flaky-asr",
+      start: async (_o, onEvent) => {
+        starts++;
+        emitters.push(onEvent);
+        const mine: number[] = [];
+        sent.push(mine);
+        return { sendAudio: (pcm) => mine.push(pcm.length), finalize: () => {}, close: () => {} };
+      },
+    };
+    const { providers } = fakeProviders();
+    const messages: ServerMessage[] = [];
+    const clock = new ManualClock(0);
+    const session = new TranslationSession(
+      {
+        sessionId: "s-reconnect",
+        config: {
+          sourceLang: "en",
+          targetLang: "hi",
+          direction: "inbound",
+          inputSampleRate: 16000,
+          glossary: [],
+        },
+        providers: { ...providers, asr },
+        clock,
+      },
+      { onMessage: (m) => messages.push(m), onAudio: () => {} },
+    );
+    await session.start();
+    session.pushAudio(new Int16Array(32000)); // 2 s
+    clock.set(2000);
+    (emitters[0] as (e: AsrEvent) => void)({ type: "closed" });
+    // Audio arriving while the socket is down is buffered, then replayed on the new stream.
+    session.pushAudio(new Int16Array(8000));
+    await settle();
+    expect(starts).toBe(2);
+    expect(session.asrRestarts).toBe(1);
+    expect(sent[1]).toEqual([8000]);
+    expect(messages.find((m) => m.type === "error")).toMatchObject({ fatal: false });
+
+    // New stream's clock starts at 0 = 2 s into the session.
+    clock.set(3000);
+    const words = wordsFromText("Hello there.", 100);
+    (emitters[1] as (e: AsrEvent) => void)({ type: "partial", text: "", words });
+    (emitters[1] as (e: AsrEvent) => void)({ type: "final", text: "", words, speechFinal: true });
+    await settle();
+    const final = messages.find((m) => m.type === "transcript" && m.final);
+    expect(final).toMatchObject({ text: "Hello there." });
+    const trace = messages.find((m) => m.type === "trace");
+    // Word at 100 ms on the new stream = 2100 ms on the session timeline, which arrived at clock 2000.
+    expect(trace?.type === "trace" && trace.hops.speechStart).toBeGreaterThanOrEqual(2000);
+    await session.stop();
+  });
+
+  it("asks TTS for a faster voice while the listener is behind, and natural speed once caught up", async () => {
+    const { providers, asrEmit } = fakeProviders();
+    const speeds: Array<number | undefined> = [];
+    const tts: TtsProvider = {
+      ...providers.tts,
+      synthesize: async (text, o, onAudio) => {
+        speeds.push(o.speed);
+        await collect(text);
+        onAudio(new Int16Array(10));
+      },
+    };
+    const clock = new ManualClock(0);
+    const session = new TranslationSession(
+      {
+        sessionId: "s-speed",
+        config: {
+          sourceLang: "en",
+          targetLang: "hi",
+          direction: "inbound",
+          inputSampleRate: 16000,
+          glossary: [],
+        },
+        providers: { ...providers, tts },
+        clock,
+      },
+      { onMessage: () => {}, onAudio: () => {} },
+    );
+    await session.start();
+    const say = (text: string, at: number) => {
+      const words = wordsFromText(text, at);
+      asrEmit({ type: "final", text, words, speechFinal: true });
+    };
+    say("One.", 0);
+    await settle();
+    session.reportPlayback(1, 500, 3600);
+    say("Two.", 1000);
+    await settle();
+    session.reportPlayback(2, 1500, 0);
+    say("Three.", 2000);
+    await settle();
+    expect(speeds).toEqual([undefined, 1.15, undefined]);
+    await session.stop();
+  });
 });

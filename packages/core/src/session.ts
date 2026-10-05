@@ -6,7 +6,7 @@ import { ContextWindow } from "./context-window.js";
 import { type Segment, Segmenter, type SegmenterOptions } from "./segmenter.js";
 import { TextQueue } from "./text-queue.js";
 import { Tracer } from "./tracer.js";
-import type { AsrEvent, AsrStream, Providers } from "./types.js";
+import type { AsrEvent, AsrStream, AsrWord, Providers } from "./types.js";
 
 export type SessionState = "idle" | "starting" | "active" | "stopping" | "stopped";
 
@@ -61,8 +61,13 @@ export class TranslationSession {
   private readonly inflight = new Set<Promise<void>>();
   private asr: AsrStream | undefined;
   private _state: SessionState = "idle";
-  /** Audio that arrived while the ASR socket was still opening; replayed once active. */
+  /** Audio that arrived while the ASR socket was opening or reconnecting; replayed once it is up. */
   private pendingAudio: Int16Array[] = [];
+  private pendingSamples = 0;
+  /** Word times from the current ASR stream are relative to its first sample; this maps them onto the session timeline. */
+  private asrOffsetMs = 0;
+  private asrGeneration = 0;
+  asrRestarts = 0;
   private readonly speculative: boolean;
   private readonly speculationDebounceMs: number;
   private speculation: Speculation | undefined;
@@ -123,19 +128,16 @@ export class TranslationSession {
   async start(): Promise<void> {
     if (this._state !== "idle") throw new Error(`cannot start from state ${this._state}`);
     this._state = "starting";
+    this.providers.mt.warm?.();
     try {
-      this.asr = await this.providers.asr.start(
-        { language: this.sourceLang, sampleRate: this.cfg.inputSampleRate },
-        (e) => this.onAsrEvent(e),
-      );
+      await this.openAsr();
     } catch (err) {
       this._state = "stopped";
       this.emit({ type: "error", code: "provider_failed", message: describe(err), fatal: true });
       throw err;
     }
     this._state = "active";
-    for (const pcm of this.pendingAudio) this.pushAudio(pcm);
-    this.pendingAudio = [];
+    this.replayPending();
     this.emit({
       type: "session.ready",
       sessionId: this.id,
@@ -149,13 +151,79 @@ export class TranslationSession {
   }
 
   pushAudio(pcm: Int16Array): void {
-    if (this._state === "starting") {
+    if (this._state !== "starting" && this._state !== "active") return;
+    this.timeline.record(pcm.length, this.clock.now());
+    if (!this.asr) {
       this.pendingAudio.push(pcm);
+      this.pendingSamples += pcm.length;
+      // Keep at most ~15 s while the vendor is away; older audio would arrive too late to matter.
+      while (this.pendingSamples > this.cfg.inputSampleRate * 15 && this.pendingAudio.length > 1) {
+        this.pendingSamples -= (this.pendingAudio.shift() as Int16Array).length;
+      }
       return;
     }
-    if (this._state !== "active" || !this.asr) return;
-    this.timeline.record(pcm.length, this.clock.now());
     this.asr.sendAudio(pcm);
+  }
+
+  private async openAsr(): Promise<void> {
+    const gen = ++this.asrGeneration;
+    const stream = await this.providers.asr.start(
+      { language: this.sourceLang, sampleRate: this.cfg.inputSampleRate },
+      (e) => this.onAsrEvent(e, gen),
+    );
+    if (gen !== this.asrGeneration || this._state === "stopping" || this._state === "stopped") {
+      stream.close();
+      return;
+    }
+    this.asr = stream;
+  }
+
+  private replayPending(): void {
+    const pending = this.pendingAudio;
+    this.pendingAudio = [];
+    this.pendingSamples = 0;
+    for (const pcm of pending) this.asr?.sendAudio(pcm);
+  }
+
+  /**
+   * The vendor socket dropped mid-call. Ship what we had, buffer incoming audio, reopen with backoff and
+   * re-base word times so segments stay on one timeline. Three failures in a row end the session.
+   */
+  private async reconnectAsr(reason: string): Promise<void> {
+    this.asr?.close();
+    this.asr = undefined;
+    this.asrGeneration++;
+    this.segmenter.flush(true);
+    this.asrOffsetMs = this.timeline.positionMs;
+    this.emit({
+      type: "error",
+      code: "provider_failed",
+      message: `asr ${reason}; reconnecting`,
+      fatal: false,
+    });
+    const delays = [0, 500, 1500];
+    for (const delay of delays) {
+      if (this._state !== "active") return;
+      if (delay > 0) await new Promise((r) => setTimeout(r, delay));
+      try {
+        await this.openAsr();
+        if (this.asr) {
+          this.asrRestarts++;
+          this.replayPending();
+          return;
+        }
+      } catch {
+        // try again
+      }
+    }
+    if (this._state !== "active") return;
+    this.emit({
+      type: "error",
+      code: "provider_failed",
+      message: `asr ${reason}; could not reconnect`,
+      fatal: true,
+    });
+    void this.stop("asr_failed");
   }
 
   /** Client-side VAD detected end of speech. */
@@ -165,8 +233,15 @@ export class TranslationSession {
     this.segmenter.speechEnded();
   }
 
-  /** Client tells us when a segment actually started playing (already converted to this session's clock). */
-  reportPlayback(segmentId: number, playbackStartTsMs: number): void {
+  /** Most recent translated-audio backlog reported by the client's player. */
+  private backlogMs = 0;
+
+  /**
+   * Client tells us when a segment actually started playing (already converted to this session's clock)
+   * and how much translated audio is still queued behind it.
+   */
+  reportPlayback(segmentId: number, playbackStartTsMs: number, backlogMs = 0): void {
+    this.backlogMs = backlogMs;
     this.tracer.mark(segmentId, "playbackStart", playbackStartTsMs);
     const hops = this.tracer.get(segmentId);
     if (hops) this.emit({ type: "trace", segmentId, hops });
@@ -175,7 +250,7 @@ export class TranslationSession {
   async stop(reason = "client"): Promise<void> {
     if (this._state === "stopped" || this._state === "stopping") return;
     this._state = "stopping";
-    this.segmenter.flush();
+    this.segmenter.flush(true);
     this.segmenter.dispose();
     this.dropSpeculation();
     this.asr?.close();
@@ -185,19 +260,32 @@ export class TranslationSession {
     this.emit({ type: "session.stopped", reason });
   }
 
-  private onAsrEvent(event: AsrEvent): void {
-    if (this._state !== "active") return;
-    if (event.type === "error") {
-      this.emit({
-        type: "error",
-        code: "provider_failed",
-        message: describe(event.error),
-        fatal: true,
-      });
-      void this.stop("asr_failed");
+  private onAsrEvent(event: AsrEvent, generation: number): void {
+    if (this._state !== "active" || generation !== this.asrGeneration) return;
+    if (event.type === "error" || event.type === "closed") {
+      void this.reconnectAsr(event.type === "error" ? describe(event.error) : "socket closed");
       return;
     }
-    this.segmenter.handle(event);
+    const off = this.asrOffsetMs;
+    if (off === 0) {
+      this.segmenter.handle(event);
+      return;
+    }
+    const shift = (words: readonly AsrWord[]): AsrWord[] =>
+      words.map((w) => ({ ...w, startMs: w.startMs + off, endMs: w.endMs + off }));
+    switch (event.type) {
+      case "partial":
+        this.segmenter.handle({ ...event, words: shift(event.words) });
+        break;
+      case "final":
+        this.segmenter.handle({ ...event, words: shift(event.words) });
+        break;
+      case "utterance_end":
+        this.segmenter.handle({ ...event, lastWordEndMs: event.lastWordEndMs + off });
+        break;
+      default:
+        this.segmenter.handle(event);
+    }
   }
 
   private scheduleSpeculation(segmentId: number, text: string): void {
@@ -309,9 +397,12 @@ export class TranslationSession {
     const spec = this.takeSpeculation(seg);
     const slot = this.sequencer.open(id);
     const queue = new TextQueue();
-    const ttsOpts = this.cfg.voice
-      ? { language: this.targetLang, voice: this.cfg.voice }
-      : { language: this.targetLang };
+    const speed = ttsSpeedFor(this.backlogMs);
+    const ttsOpts = {
+      language: this.targetLang,
+      ...(this.cfg.voice ? { voice: this.cfg.voice } : {}),
+      ...(speed !== 1 ? { speed } : {}),
+    };
     const tts = this.providers.tts
       .synthesize(queue, ttsOpts, (pcm) => {
         this.tracer.mark(id, "ttsFirstByte");
@@ -382,6 +473,22 @@ function sameWords(a: string, b: string): boolean {
 function speculationMatches(hypothesis: string, final: string): boolean {
   if (!sameWords(hypothesis, final)) return false;
   return !final.trimEnd().endsWith("?") || hypothesis.trimEnd().endsWith("?");
+}
+
+/**
+ * Backlog control, first layer: when the listener is more than a sentence behind, ask the voice to
+ * speak a little faster (still natural — 1.15× is a brisk speaker). The client's pitch-preserving
+ * time-stretch is the second layer, for when even that is not enough.
+ */
+export function ttsSpeedFor(
+  backlogMs: number,
+  comfortMs = 1200,
+  panicMs = 4000,
+  max = 1.15,
+): number {
+  if (backlogMs <= comfortMs) return 1;
+  const t = Math.min(1, (backlogMs - comfortMs) / (panicMs - comfortMs));
+  return Math.round((1 + (max - 1) * t) * 20) / 20;
 }
 
 function describe(err: unknown): string {

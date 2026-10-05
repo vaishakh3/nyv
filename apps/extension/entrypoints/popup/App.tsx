@@ -42,7 +42,8 @@ export function App() {
 
   const onMeet = !!tab?.url?.startsWith("https://meet.google.com/");
   const capturable = !!tab?.url && /^https?:/.test(tab.url);
-  const running = status.state === "active" || status.state === "connecting";
+  const running =
+    status.state === "active" || status.state === "connecting" || status.state === "reconnecting";
 
   const toggle = async () => {
     setBusy(true);

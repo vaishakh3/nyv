@@ -206,7 +206,7 @@ export class RelayServer {
           session?.speechEnded();
           return;
         case "trace.playback":
-          session?.reportPlayback(msg.segmentId, msg.playbackStartTsMs);
+          session?.reportPlayback(msg.segmentId, msg.playbackStartTsMs, msg.backlogMs);
           return;
         case "ping":
           send({

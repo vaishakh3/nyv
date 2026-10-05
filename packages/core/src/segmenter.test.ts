@@ -62,6 +62,45 @@ describe("Segmenter", () => {
     expect(segments[1]).toMatchObject({ speechStartMs: 600, speechEndMs: 1800 });
   });
 
+  it("drops a re-sent last word even when the vendor re-times it past the shipped boundary", () => {
+    const { seg, segments } = setup();
+    const first = [
+      { word: "Hi,", startMs: 0, endMs: 80 },
+      { word: "everyone.", startMs: 80, endMs: 400 },
+    ];
+    seg.handle({ type: "partial", text: "", words: first });
+    seg.handle({ type: "partial", text: "", words: first });
+    expect(segments.map((s) => s.text)).toEqual(["Hi, everyone."]);
+    // Next update: "everyone." now starts after the shipped boundary (400) — still the same word.
+    const next = [
+      { word: "Hi,", startMs: 0, endMs: 300 },
+      { word: "everyone.", startMs: 420, endMs: 700 },
+      ...wordsFromText("Thanks for joining today.", 800),
+    ];
+    seg.handle({ type: "partial", text: "", words: next });
+    seg.handle({ type: "partial", text: "", words: next });
+    expect(segments.map((s) => s.text)).toEqual(["Hi, everyone.", "Thanks for joining today."]);
+  });
+
+  it("ships the unstable tail only when told the stream has ended", () => {
+    const { seg, segments } = setup();
+    seg.handle({ type: "partial", text: "", words: wordsFromText("Let's move on to the", 0) });
+    seg.handle({
+      type: "partial",
+      text: "",
+      words: wordsFromText("Let's move on to the next quarter.", 0),
+    });
+    seg.flush();
+    expect(segments.map((s) => s.text)).toEqual(["Let's move on to the"]);
+    seg.handle({
+      type: "partial",
+      text: "",
+      words: wordsFromText("Let's move on to the next quarter.", 0),
+    });
+    seg.handle({ type: "closed" });
+    expect(segments.map((s) => s.text)).toEqual(["Let's move on to the", "next quarter."]);
+  });
+
   it("drops a re-sent last word whose interim timing was truncated", () => {
     const { seg, segments } = setup();
     // Interim: "today." is still being spoken, so its end time is early.

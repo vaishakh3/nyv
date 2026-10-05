@@ -1,4 +1,4 @@
-# fly launch --no-deploy --copy-config; then: fly secrets set DEEPGRAM_API_KEY=... GROQ_API_KEY=... ELEVENLABS_API_KEY=... RELAY_TOKENS=...
+# fly launch --no-deploy --copy-config; then: fly secrets set DEEPGRAM_API_KEY=... GROQ_API_KEY=... OPENAI_API_KEY=... ELEVENLABS_API_KEY=... RELAY_TOKENS=...
 app = "nyv-relay"
 primary_region = "bom"
 
@@ -9,6 +9,8 @@ primary_region = "bom"
 [env]
   ASR_PROVIDER = "deepgram"
   MT_PROVIDER = "groq"
+  # Needs OPENAI_API_KEY in secrets; drop the line to run Groq alone.
+  MT_FALLBACK_PROVIDER = "openai"
   TTS_PROVIDER = "elevenlabs"
   MAX_SESSIONS = "50"
   MAX_SESSIONS_PER_IP = "3"

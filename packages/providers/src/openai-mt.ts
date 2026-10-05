@@ -23,30 +23,41 @@ export class OpenAiMtProvider implements MtProvider {
     this.name = `${opts.label ?? "openai"}:${opts.model ?? "gpt-4o-mini"}`;
   }
 
+  /** One cheap GET keeps a connection in undici's pool for the first real request. */
+  warm(): void {
+    void fetch(`${this.base}/models`, {
+      method: "GET",
+      headers: { authorization: `Bearer ${this.opts.apiKey}` },
+    })
+      .then((r) => r.body?.cancel())
+      .catch(() => undefined);
+  }
+
+  private get base(): string {
+    return this.opts.baseUrl ?? "https://api.openai.com/v1";
+  }
+
   async translate(
     req: MtRequest,
     onToken: (t: string) => void,
     signal?: AbortSignal,
   ): Promise<string> {
-    const res = await fetch(
-      `${this.opts.baseUrl ?? "https://api.openai.com/v1"}/chat/completions`,
-      {
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
-          authorization: `Bearer ${this.opts.apiKey}`,
-        },
-        body: JSON.stringify({
-          model: this.opts.model ?? "gpt-4o-mini",
-          stream: true,
-          temperature: 0.2,
-          max_tokens: this.opts.maxTokens ?? 400,
-          ...this.opts.extraBody,
-          messages: buildMessages(req),
-        }),
-        ...(signal ? { signal } : {}),
+    const res = await fetch(`${this.base}/chat/completions`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${this.opts.apiKey}`,
       },
-    );
+      body: JSON.stringify({
+        model: this.opts.model ?? "gpt-4o-mini",
+        stream: true,
+        temperature: 0.2,
+        max_tokens: this.opts.maxTokens ?? 400,
+        ...this.opts.extraBody,
+        messages: buildMessages(req),
+      }),
+      ...(signal ? { signal } : {}),
+    });
     if (!res.ok || !res.body) throw new Error(`openai ${res.status}: ${await res.text()}`);
 
     let full = "";

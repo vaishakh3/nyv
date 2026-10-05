@@ -93,7 +93,7 @@ export class Segmenter {
         break;
       case "error":
       case "closed":
-        this.flush();
+        this.flush(true);
         break;
     }
   }
@@ -116,10 +116,9 @@ export class Segmenter {
     while (i < words.length) {
       const w = words[i] as AsrWord;
       const overlaps = w.startMs + 40 < this.emittedUntilMs;
+      // Every earlier word was dropped, so this is the chunk's first surviving word.
       const repeats =
-        i === 0 &&
-        w.startMs < this.emittedUntilMs + 400 &&
-        normalize(w.word) === this.lastEmittedWord;
+        w.startMs < this.emittedUntilMs + 400 && normalize(w.word) === this.lastEmittedWord;
       if (!overlaps && !repeats) break;
       i++;
     }
@@ -131,11 +130,17 @@ export class Segmenter {
     this.flush();
   }
 
-  /** Force-close the open segment, if any. */
-  flush(): void {
+  /**
+   * Force-close the open segment, if any. The unstable tail is normally dropped rather than translated
+   * as a guess; pass `includeUnstable` when no better hypothesis can arrive (stream ended).
+   */
+  flush(includeUnstable = false): void {
     this.clearPauseTimer();
+    if (includeUnstable && this.unstable.length > 0) {
+      this.committedWords = [...this.committedWords, ...this.unstable];
+      this.unstable = [];
+    }
     if (this.committedWords.length === 0) {
-      // Nothing stable; drop the unstable tail rather than translate a guess.
       this.unstable = [];
       return;
     }

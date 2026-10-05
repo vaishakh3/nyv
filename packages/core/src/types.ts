@@ -58,6 +58,8 @@ export interface MtRequest {
 
 export interface MtProvider {
   readonly name: string;
+  /** Optional: open the HTTP connection ahead of the first request so it skips DNS/TLS. */
+  warm?(): void;
   /** Streams target-language tokens through onToken and resolves with the full translation. */
   translate(
     req: MtRequest,
@@ -71,6 +73,8 @@ export interface MtProvider {
 export interface TtsOptions {
   language: LanguageCode;
   voice?: string;
+  /** Speaking-rate multiplier (1 = natural). The session raises it slightly when the listener is behind. */
+  speed?: number;
 }
 
 export interface TtsProvider {

@@ -34,11 +34,16 @@ export class Engine {
   private readonly traced = new Set<number>();
   private duckTimer: ReturnType<typeof setInterval> | undefined;
   private statusTimer: ReturnType<typeof setTimeout> | undefined;
+  private settings: Settings | undefined;
+  /** Bumped on stop/start so a stale socket's close event cannot trigger a reconnect. */
+  private epoch = 0;
 
   constructor(private readonly events: EngineEvents) {}
 
   async start(streamId: string, settings: Settings): Promise<void> {
     await this.stop();
+    this.settings = settings;
+    const epoch = ++this.epoch;
     this.setStatus({ ...IDLE_STATUS, state: "connecting" });
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -72,23 +77,7 @@ export class Engine {
       this.playback.port.onmessage = (e: MessageEvent<PlaybackWorkletMessage>) =>
         this.onPlayback(e.data);
 
-      this.relay = new RelayClient(relayUrlWithToken(settings.relayUrl, settings.relayToken), {
-        onMessage: (m) => this.onRelayMessage(m),
-        onAudio: (f) => this.onRelayAudio(f),
-        onClose: (reason) => {
-          if (this.status.state === "active" || this.status.state === "connecting") {
-            this.setStatus({
-              ...this.status,
-              state: "error",
-              error: `relay disconnected: ${reason}`,
-            });
-          }
-        },
-      });
-      await this.relay.connect({
-        sourceLang: settings.sourceLang,
-        targetLang: settings.targetLang,
-      });
+      await this.openRelay(epoch);
       this.duckTimer = setInterval(() => this.applyDucking(), 50);
     } catch (err) {
       await this.stop();
@@ -101,7 +90,53 @@ export class Engine {
     }
   }
 
+  /** Opens the relay socket and starts a server session; capture and playback nodes are untouched. */
+  private async openRelay(epoch: number): Promise<void> {
+    const settings = this.settings;
+    if (!settings) throw new Error("engine not started");
+    const relay = new RelayClient(relayUrlWithToken(settings.relayUrl, settings.relayToken), {
+      onMessage: (m) => {
+        if (this.relay === relay) this.onRelayMessage(m);
+      },
+      onAudio: (f) => {
+        if (this.relay === relay) this.onRelayAudio(f);
+      },
+      onClose: (reason) => {
+        if (this.relay !== relay || epoch !== this.epoch) return;
+        if (this.status.state === "active" || this.status.state === "connecting")
+          void this.reconnect(epoch, reason);
+      },
+    });
+    this.relay = relay;
+    await relay.connect({ sourceLang: settings.sourceLang, targetLang: settings.targetLang });
+  }
+
+  /**
+   * The relay link dropped mid-call. Capture keeps running and queued audio keeps playing; we re-open
+   * the socket with backoff (~10 s budget). The server session is new, so segment ids restart at 1.
+   */
+  private async reconnect(epoch: number, reason: string): Promise<void> {
+    this.relay = undefined;
+    this.setStatus({ ...this.status, state: "reconnecting", error: `relay: ${reason}` });
+    for (const delayMs of [300, 1000, 2500, 5000]) {
+      await new Promise((r) => setTimeout(r, delayMs));
+      if (epoch !== this.epoch) return;
+      try {
+        this.captions.clear();
+        this.traced.clear();
+        await this.openRelay(epoch);
+        return;
+      } catch (err) {
+        console.warn("[nyv] reconnect failed:", err instanceof Error ? err.message : err);
+      }
+    }
+    if (epoch !== this.epoch) return;
+    this.setStatus({ ...this.status, state: "error", error: `relay disconnected: ${reason}` });
+  }
+
   async stop(): Promise<void> {
+    this.epoch++;
+    this.settings = undefined;
     if (this.duckTimer) clearInterval(this.duckTimer);
     this.duckTimer = undefined;
     this.relay?.close();
@@ -190,6 +225,7 @@ export class Engine {
         else console.warn("[nyv] relay:", m.code, m.message);
         break;
       case "session.stopped":
+        // The server ended the session (limits, idle, shutdown); a dropped socket goes through reconnect instead.
         if (this.status.state === "active") void this.stop();
         break;
       default:

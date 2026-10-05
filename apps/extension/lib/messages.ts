@@ -1,6 +1,6 @@
 import type { SessionConfig } from "@nyv/protocol";
 
-export type EngineState = "idle" | "connecting" | "active" | "error";
+export type EngineState = "idle" | "connecting" | "active" | "reconnecting" | "error";
 
 export interface Status {
   state: EngineState;

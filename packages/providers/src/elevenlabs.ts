@@ -126,14 +126,16 @@ export class ElevenLabsTtsProvider implements TtsProvider {
     });
   }
 
+  /** voice_settings are fixed at BOS, so the speed is part of the socket identity. */
   private keyFor(o: TtsOptions): string {
     const voice =
       o.voice ?? this.opts.voices?.[o.language] ?? this.opts.defaultVoice ?? DEFAULT_VOICE;
-    return `${voice}|${o.language}`;
+    const speed = Math.min(1.2, Math.max(0.7, o.speed ?? 1)).toFixed(2);
+    return `${voice}|${o.language}|${speed}`;
   }
 
   private connect(key: string, o: TtsOptions): WarmSocket {
-    const [voice, language] = key.split("|") as [string, string];
+    const [voice, language, speed] = key.split("|") as [string, string, string];
     const params = new URLSearchParams({
       model_id: this.opts.modelId ?? "eleven_flash_v2_5",
       output_format: `pcm_${this.outputSampleRate}`,
@@ -149,7 +151,7 @@ export class ElevenLabsTtsProvider implements TtsProvider {
           JSON.stringify({
             text: " ",
             xi_api_key: this.opts.apiKey,
-            voice_settings: { stability: 0.5, similarity_boost: 0.8, speed: 1.0 },
+            voice_settings: { stability: 0.5, similarity_boost: 0.8, speed: Number(speed) },
             // Smaller first chunk → lower time-to-first-byte at the cost of slightly less natural prosody.
             generation_config: { chunk_length_schedule: [50, 90, 140, 200] },
           }),
