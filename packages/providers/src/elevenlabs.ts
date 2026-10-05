@@ -7,12 +7,14 @@ export interface ElevenLabsOptions {
   modelId?: string;
   /** Default voice per language; any multilingual voice works for all of them. */
   voices?: Partial<Record<LanguageCode, string>>;
+  /** Fallback when no per-language voice is set. */
+  defaultVoice?: string;
   sampleRate?: 16000 | 22050 | 24000 | 44100;
   baseUrl?: string;
 }
 
-/** A multilingual stock voice usable for every launch language. Users pick their own later. */
-const DEFAULT_VOICE = "21m00Tcm4TlvDq8ikWAM";
+/** "Sarah": a premade multilingual voice, usable on free-tier keys (library voices are not). */
+const DEFAULT_VOICE = "EXAVITQu4vr4xnSDxMaL";
 
 /**
  * ElevenLabs streaming TTS with streaming *text input* (stream-input WebSocket): audio starts coming
@@ -33,7 +35,8 @@ export class ElevenLabsTtsProvider implements TtsProvider {
     onAudio: (pcm: Int16Array) => void,
     signal?: AbortSignal,
   ): Promise<void> {
-    const voice = o.voice ?? this.opts.voices?.[o.language] ?? DEFAULT_VOICE;
+    const voice =
+      o.voice ?? this.opts.voices?.[o.language] ?? this.opts.defaultVoice ?? DEFAULT_VOICE;
     const params = new URLSearchParams({
       model_id: this.opts.modelId ?? "eleven_flash_v2_5",
       output_format: `pcm_${this.outputSampleRate}`,
