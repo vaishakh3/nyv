@@ -81,6 +81,10 @@ importers:
         version: 3.2.7(@types/node@22.20.5)(jiti@2.7.0)(lightningcss@1.33.0)(tsx@4.23.15)
 
   apps/web:
+    dependencies:
+      '@fontsource/noto-serif-malayalam':
+        specifier: ^5.3.0
+        version: 5.3.0
     devDependencies:
       '@fontsource-variable/inter':
         specifier: ^5.3.0
@@ -841,6 +845,9 @@ packages:
 
   '@fontsource/noto-serif-devanagari@5.3.0':
     resolution: {integrity: sha512-POketgM+TcAbtQCpl5GUmlCVvV7zGnFmLlQTIVxp0ePZkKTJ1UhpeyscIpgljOzHjrVzXPj7x1lSXl2W/wI3Gg==}
+
+  '@fontsource/noto-serif-malayalam@5.3.0':
+    resolution: {integrity: sha512-VxpndrkwYlSkS4x6m6D5lTktMfqzuLBGvxhMu5Wk/gn8qBKYXaaIHtNcNPCEZ/LLsSQvZYDc5eFV14Rvv/wWEA==}
 
   '@jridgewell/gen-mapping@0.3.13':
     resolution: {integrity: sha512-2kkt/7niJ6MgEPxF0bYdQ6etZaA+fQvDcLKckhy1yIQOzaoKjBBjSj63/aLVjYE3qhRt5dvM+uUyfCg6UKCBbA==}
@@ -3328,6 +3335,8 @@ snapshots:
   '@fontsource/instrument-serif@5.3.0': {}
 
   '@fontsource/noto-serif-devanagari@5.3.0': {}
+
+  '@fontsource/noto-serif-malayalam@5.3.0': {}
 
   '@jridgewell/gen-mapping@0.3.13':
     dependencies:

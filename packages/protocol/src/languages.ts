@@ -2,6 +2,7 @@
 export const LANGUAGES = {
   en: { name: "English", native: "English" },
   hi: { name: "Hindi", native: "हिन्दी" },
+  ml: { name: "Malayalam", native: "മലയാളം" },
   es: { name: "Spanish", native: "Español" },
   fr: { name: "French", native: "Français" },
   de: { name: "German", native: "Deutsch" },

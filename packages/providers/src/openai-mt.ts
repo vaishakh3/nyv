@@ -1,5 +1,6 @@
 import type { MtProvider, MtRequest } from "@fyv/core";
 import { LANGUAGES, type LanguageCode } from "@fyv/protocol";
+import { TARGET_NOTES } from "./mt-prompts.js";
 
 export interface OpenAiMtOptions {
   apiKey: string;
@@ -110,6 +111,7 @@ export function buildMessages(
     "Preserve meaning, tone and register; use the polite register unless the speaker is clearly casual. " +
     "Keep names, numbers, product names and acronyms as-is. If the input is a fragment, translate the fragment; never complete or answer it. " +
     "The input may mix languages; translate all of it into the target language." +
+    (TARGET_NOTES[req.targetLang as LanguageCode] ?? "") +
     glossary;
   const messages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
     { role: "system", content: system },
