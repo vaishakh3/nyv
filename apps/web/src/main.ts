@@ -40,6 +40,7 @@ async function run(): Promise<void> {
     for (const [en, hi, ms] of SCRIPT) {
       speaker?.classList.add("speaking");
       mic?.classList.add("on");
+      dst.parentElement?.classList.add("stale");
       level = 1;
       const typing = type(src, en, 55);
       await sleep(Math.max(0, en.length * 55 - 300));
@@ -51,6 +52,7 @@ async function run(): Promise<void> {
       await sleep(ms - 300);
       lat.textContent = `${(ms / 1000).toFixed(2)} s`;
       level = 0.8;
+      dst.parentElement?.classList.remove("stale");
       await type(dst, hi, 40);
       level = 0;
       await sleep(1500);
@@ -108,7 +110,7 @@ function reveal(): void {
           io.unobserve(e.target);
         }
     },
-    { rootMargin: "0px 0px -8% 0px" },
+    { rootMargin: "0px 0px -40px 0px" },
   );
   for (const el of els) io.observe(el);
 }
