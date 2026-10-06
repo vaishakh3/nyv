@@ -4,131 +4,174 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>nyv — hear every call in your language</title>
-    <meta name="description" content="nyv translates live video calls speech-to-speech in about a second. Google Meet Chrome extension; desktop app for every call tool coming." />
-    <meta name="theme-color" content="#0b0d12" />
+    <meta name="description" content="nyv translates live video calls speech-to-speech in under a second. A Chrome extension for Google Meet today; a desktop app for every call tool next." />
+    <meta name="theme-color" content="#f7f4ee" />
     <meta property="og:title" content="nyv — hear every call in your language" />
-    <meta property="og:description" content="Real-time speech-to-speech translation for live calls. ~1 s from the end of a phrase to translated speech." />
+    <meta property="og:description" content="Real-time speech-to-speech translation for live calls. Under a second from the end of a phrase to translated speech." />
     <meta property="og:image" content="/icon.png" />
     <meta property="og:url" content="https://nyv.si" />
     <meta name="twitter:card" content="summary" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/icon.png" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=Inter:wght@400;500&family=Noto+Sans+Devanagari:wght@500&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="/src/style.css" />
   </head>
   <body>
-    <div class="glow" aria-hidden="true"></div>
+    <a class="skip" href="#main">Skip to content</a>
     <header class="nav">
-      <a class="brand" href="/"><img src="/icon.png" alt="" width="28" height="28" /> nyv</a>
-      <nav>
+      <a class="brand" href="/" aria-label="nyv home">
+        <svg width="26" height="26" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="14" fill="#15130f"/><g fill="#f7f4ee"><rect x="12" y="23" width="6" height="18" rx="3"/><rect x="21.5" y="16" width="6" height="32" rx="3"/><rect x="36.5" y="16" width="6" height="32" rx="3"/><rect x="46" y="23" width="6" height="18" rx="3"/></g><rect x="29" y="9" width="6" height="46" rx="3" fill="#e2552b"/></svg>
+        <span>nyv</span>
+      </a>
+      <nav aria-label="Primary">
         <a href="#how">How it works</a>
+        <a href="#numbers">Numbers</a>
         <a href="#languages">Languages</a>
-        <a href="#engineering">Engineering</a>
-        <a class="gh" href="https://github.com/vaishakh3/nyv" rel="noopener">GitHub</a>
+        <a href="#roadmap">Roadmap</a>
       </nav>
+      <a class="btn small" href="https://github.com/vaishakh3/nyv#quick-start" rel="noopener">Get the extension</a>
     </header>
 
-    <main>
+    <main id="main">
       <section class="hero">
-        <p class="eyebrow"><span class="live-dot"></span> Live speech-to-speech translation</p>
-        <h1>Hear every call<br /><span class="grad">in your language.</span></h1>
-        <p class="lede">
-          Someone speaks English on Google Meet. You hear Hindi — about a second later, in a natural voice,
-          while they are still talking. Nothing to install for the other side.
-        </p>
-        <div class="cta">
-          <a class="btn primary" href="https://github.com/vaishakh3/nyv#quick-start" rel="noopener">Get the Chrome extension</a>
-          <a class="btn ghost" href="#how">See how it works</a>
+        <div class="hero-copy">
+          <p class="eyebrow"><span class="live" aria-hidden="true"></span>Live speech-to-speech translation for calls</p>
+          <h1>Hear every call <em>in your language.</em></h1>
+          <p class="lede">
+            They speak English on Google Meet. You hear Hindi — in a natural voice, under a second behind,
+            while they are still talking. Nothing to install on their side.
+          </p>
+          <div class="cta">
+            <a class="btn" href="https://github.com/vaishakh3/nyv#quick-start" rel="noopener">Get the Chrome extension</a>
+            <a class="link" href="#how">How it works <span aria-hidden="true">→</span></a>
+          </div>
         </div>
 
-        <figure class="demo" aria-label="Live translation demo">
-          <div class="demo-head">
-            <span class="chip">Google Meet · live</span>
-            <span class="chip latency">latency <b id="lat">0.98 s</b></span>
+        <figure class="stage" aria-label="A live call being translated from English to Hindi">
+          <div class="call">
+            <div class="tile speaking" aria-hidden="true">
+              <svg class="avatar" viewBox="0 0 64 64"><title>Participant</title><circle cx="32" cy="24" r="12" fill="#d8cfc0"/><path d="M10 58c2-13 11-20 22-20s20 7 22 20" fill="#d8cfc0"/></svg>
+              <span class="name">Arjun · speaking</span>
+              <span class="ring"></span>
+            </div>
+            <div class="tile" aria-hidden="true">
+              <svg class="avatar" viewBox="0 0 64 64"><title>Participant</title><circle cx="32" cy="24" r="12" fill="#cfd6d8"/><path d="M10 58c2-13 11-20 22-20s20 7 22 20" fill="#cfd6d8"/></svg>
+              <span class="name">You</span>
+            </div>
+            <div class="tile" aria-hidden="true">
+              <svg class="avatar" viewBox="0 0 64 64"><title>Participant</title><circle cx="32" cy="24" r="12" fill="#d9d2cf"/><path d="M10 58c2-13 11-20 22-20s20 7 22 20" fill="#d9d2cf"/></svg>
+              <span class="name">Maya</span>
+            </div>
+            <div class="caption">
+              <div class="row src"><span class="tag">EN</span><span id="src" class="text"></span></div>
+              <div class="row dst"><span class="tag">HI</span><span id="dst" class="text" lang="hi"></span></div>
+            </div>
           </div>
-          <canvas id="wave" width="1200" height="140" aria-hidden="true"></canvas>
-          <div class="lines">
-            <div class="line src"><span class="lang">EN</span><span id="src"></span></div>
-            <div class="line dst"><span class="lang">HI</span><span id="dst" lang="hi"></span></div>
-          </div>
+          <figcaption class="meter">
+            <span class="meter-label"><span class="live" aria-hidden="true"></span>nyv</span>
+            <canvas id="wave" width="640" height="36" aria-hidden="true"></canvas>
+            <span class="meter-lat">phrase end → voice <b id="lat">0.74 s</b></span>
+          </figcaption>
         </figure>
       </section>
 
-      <section class="stats" aria-label="Measured performance">
-        <div><b>~1.0 s</b><span>phrase end → translated speech, p50 (measured, real vendors)</span></div>
-        <div><b>7</b><span>languages at launch, any pair</span></div>
-        <div><b>0</b><span>installs required from the person speaking</span></div>
+      <section id="numbers" class="numbers" aria-label="Measured performance">
+        <div><b>0.7<small> s</small></b><span>median delay from the end of a phrase to translated speech, measured in the browser against real vendors</span></div>
+        <div><b>250<small> ms</small></b><span>between word-level recognition updates — translation starts mid-sentence</span></div>
+        <div><b>0</b><span>installs, accounts or consent dialogs for the person speaking</span></div>
       </section>
 
       <section id="how" class="how">
-        <h2>Translation that doesn't wait for the sentence to end.</h2>
-        <p class="sub">
-          nyv streams at every hop. Speech is recognised while it is spoken, translated as words are
-          committed, and voiced while the translation is still being written. Each stage overlaps the next.
-        </p>
-        <ol class="pipeline">
-          <li><span class="n">01</span><h3>Listen</h3><p>Call audio is captured in the browser. On-device voice activity detection marks phrase ends in milliseconds.</p></li>
-          <li><span class="n">02</span><h3>Recognise</h3><p>Streaming speech recognition commits words as soon as they are stable, not when the speaker pauses.</p></li>
-          <li><span class="n">03</span><h3>Translate</h3><p>A low-latency LLM translates with the conversation as context, so names, numbers and questions survive the trip.</p></li>
-          <li><span class="n">04</span><h3>Speak</h3><p>Streaming text-to-speech starts voicing the first words of the translation before the last words exist.</p></li>
-          <li><span class="n">05</span><h3>Stay in sync</h3><p>The original speaker is ducked, not muted. If translation falls behind, playback speeds up imperceptibly to catch up.</p></li>
+        <header class="sec-head">
+          <p class="kicker">How it works</p>
+          <h2>It never waits for the sentence to end.</h2>
+          <p class="sub">
+            Human interpreters start speaking before the speaker finishes. So does nyv: every stage streams
+            into the next, and each of them is on while the one before it is still working.
+          </p>
+        </header>
+
+        <figure class="hops" aria-label="Timeline of one translated phrase">
+          <div class="hop-axis"><span>phrase end</span><span>+0.25 s</span><span>+0.5 s</span><span>+0.75 s</span></div>
+          <ol class="hop-rows">
+            <li style="--s: -1.6; --e: 0.18"><span class="hop-name">speech</span><span class="bar ink"><i>“…does that work for you?”</i></span></li>
+            <li style="--s: -1.45; --e: 0.3"><span class="hop-name">recognise</span><span class="bar"><i>words committed as they stabilise</i></span></li>
+            <li style="--s: -0.9; --e: 0.46"><span class="hop-name">translate</span><span class="bar"><i>first token 140 ms after the final</i></span></li>
+            <li style="--s: 0.36; --e: 0.68"><span class="hop-name">voice</span><span class="bar"><i>first byte ~220 ms</i></span></li>
+            <li style="--s: 0.7; --e: 1.9"><span class="hop-name">you hear</span><span class="bar accent"><i lang="hi">क्या यह आपके लिए ठीक है?</i></span></li>
+          </ol>
+          <figcaption>One real segment from the benchmark. Time runs left to right; the original speaker is quietened, not muted, while the Hindi plays.</figcaption>
+        </figure>
+
+        <ol class="steps">
+          <li><span class="n">01</span><h3>Listen</h3><p>Call audio is captured in the browser. On-device voice-activity detection marks phrase ends in milliseconds, before anything leaves your machine.</p></li>
+          <li><span class="n">02</span><h3>Recognise</h3><p>Turn-aware streaming recognition commits words the moment they stop changing — not when the speaker pauses.</p></li>
+          <li><span class="n">03</span><h3>Translate</h3><p>A low-latency model translates with the conversation as context, so names, numbers and questions survive the trip.</p></li>
+          <li><span class="n">04</span><h3>Speak</h3><p>Streaming speech starts voicing the first words of the translation before the last words exist.</p></li>
+          <li><span class="n">05</span><h3>Stay in step</h3><p>If translation falls behind, the voice speaks a touch faster and playback stretches without changing pitch. You stay within a sentence of the speaker.</p></li>
         </ol>
       </section>
 
       <section id="languages" class="languages">
-        <h2>Launch languages</h2>
-        <p class="sub">Any direction. More on the way.</p>
-        <ul class="lang-grid">
+        <header class="sec-head">
+          <p class="kicker">Languages</p>
+          <h2>Any pair. Spoken, not subtitled.</h2>
+        </header>
+        <ul class="lang-list">
           <li><b>English</b><span>English</span></li>
           <li><b lang="hi">हिन्दी</b><span>Hindi</span></li>
           <li><b>Español</b><span>Spanish</span></li>
           <li><b>Français</b><span>French</span></li>
           <li><b>Deutsch</b><span>German</span></li>
-          <li><b lang="ja">日本語</b><span>Japanese</span></li>
+          <li><b>Italiano</b><span>Italian</span></li>
           <li><b>Português</b><span>Portuguese</span></li>
+          <li class="more"><b>+</b><span>More on the way</span></li>
         </ul>
       </section>
 
-      <section id="engineering" class="eng">
-        <div class="eng-grid">
-          <div>
-            <h2>Built like infrastructure.</h2>
-            <p class="sub">
-              Latency is measured, not promised. Every segment carries per-hop timestamps from phrase end to
-              the speaker, and a replay benchmark gates every change to the pipeline.
-            </p>
-            <a class="btn ghost" href="https://github.com/vaishakh3/nyv" rel="noopener">Read the source on GitHub</a>
-          </div>
-          <ul class="facts">
-            <li><b>Streaming everywhere</b> Binary PCM over one WebSocket; ASR, MT and TTS all stream-input.</li>
-            <li><b>Speculative commit</b> LocalAgreement on partial transcripts; translation starts before the final.</li>
-            <li><b>Catch-up playback</b> Pitch-preserving time stretch keeps you within a sentence of the speaker.</li>
-            <li><b>Pre-warmed voices</b> TTS sockets are opened before they are needed; no handshake on the critical path.</li>
-            <li><b>Open core</b> MIT-licensed monorepo. Swap vendors behind one interface.</li>
-          </ul>
+      <section class="craft">
+        <div class="craft-copy">
+          <p class="kicker">Engineering</p>
+          <h2>Latency is measured, not promised.</h2>
+          <p class="sub">
+            Every translated phrase carries timestamps from the end of speech to your speaker. A replay
+            benchmark runs on every change and fails the build if the median moves. The whole pipeline is
+            open source.
+          </p>
+          <a class="link" href="https://github.com/vaishakh3/nyv" rel="noopener">Read the source on GitHub <span aria-hidden="true">→</span></a>
         </div>
+        <table class="bench">
+          <caption>32-second continuous English monologue, real vendors, phrase end → translated speech</caption>
+          <thead><tr><th scope="col">Pipeline</th><th scope="col">p50</th><th scope="col">p95</th></tr></thead>
+          <tbody>
+            <tr class="now"><th scope="row">nyv today</th><td>0.86 s</td><td>1.6 s</td></tr>
+            <tr><th scope="row">nyv, first release</th><td>1.10 s</td><td>2.2 s</td></tr>
+            <tr><th scope="row">nyv, v0 (gpt-4o-mini)</th><td>1.6 s</td><td>—</td></tr>
+          </tbody>
+        </table>
       </section>
 
-      <section class="roadmap">
-        <h2>Where this goes</h2>
-        <div class="rm">
-          <div class="now"><span class="tag">Now</span><h3>Chrome extension for Google Meet</h3><p>Inbound translation: you hear them in your language.</p></div>
-          <div><span class="tag">Next</span><h3>Speak back</h3><p>Outbound mode: they hear you in theirs. Your voice, their words.</p></div>
-          <div><span class="tag">Then</span><h3>Desktop app</h3><p>A virtual mic and speaker, so nyv works in Zoom, Teams, Discord, everything.</p></div>
-        </div>
+      <section id="roadmap" class="roadmap">
+        <header class="sec-head">
+          <p class="kicker">Roadmap</p>
+          <h2>Where this goes.</h2>
+        </header>
+        <ol class="rm">
+          <li class="now"><span class="when">Now</span><h3>Chrome extension for Google Meet</h3><p>You hear them in your language. Works on any tab with audio.</p></li>
+          <li><span class="when">Next</span><h3>Speak back</h3><p>They hear you in theirs — your voice, their words.</p></li>
+          <li><span class="when">Then</span><h3>Desktop app</h3><p>A virtual microphone and speaker, so nyv works in Zoom, Teams, Discord — everywhere.</p></li>
+        </ol>
       </section>
 
       <section class="final">
-        <h2>Stop losing people to language.</h2>
-        <a class="btn primary" href="https://github.com/vaishakh3/nyv#quick-start" rel="noopener">Get the Chrome extension</a>
+        <h2>Stop losing people <em>to language.</em></h2>
+        <a class="btn" href="https://github.com/vaishakh3/nyv#quick-start" rel="noopener">Get the Chrome extension</a>
+        <p class="fine">Free and open source. Bring your own vendor keys, or wait for hosted nyv.</p>
       </section>
     </main>
 
     <footer>
-      <span class="foot"><img src="/icon.png" alt="" width="18" height="18" /> nyv · <a href="https://nyv.si">nyv.si</a></span>
-      <span class="foot"><a href="https://github.com/vaishakh3/nyv" rel="noopener">GitHub</a> · MIT</span>
+      <span>nyv · <a href="https://nyv.si">nyv.si</a></span>
+      <span><a href="https://github.com/vaishakh3/nyv" rel="noopener">GitHub</a> · MIT licence</span>
     </footer>
     <script type="module" src="/src/main.ts"></script>
   </body>

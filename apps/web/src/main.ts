@@ -1,21 +1,27 @@
-/** Landing-page demo: a scripted EN→HI exchange typed out with realistic timing, plus a waveform. */
+import "@fontsource-variable/inter";
+import "@fontsource/instrument-serif";
+import "@fontsource/instrument-serif/400-italic.css";
+import "@fontsource/noto-serif-devanagari/500.css";
+
+/** Landing-page demo: a scripted EN→HI exchange typed out with realistic timing, plus a level meter. */
 
 const SCRIPT: ReadonlyArray<readonly [string, string, number]> = [
-  ["Hi everyone, thanks for joining.", "नमस्ते सभी, जुड़ने के लिए धन्यवाद।", 980],
-  ["I'll send you the report tomorrow morning.", "मैं आपको रिपोर्ट कल सुबह भेज दूँगा।", 1040],
-  ["Does that work for you?", "क्या यह आपके लिए ठीक है?", 910],
-  ["Let's move on to the roadmap.", "चलिए रोडमैप पर चलते हैं।", 1010],
+  ["Hi everyone, thanks for joining.", "नमस्ते सभी, जुड़ने के लिए धन्यवाद।", 740],
+  ["I'll send you the report tomorrow morning.", "मैं आपको रिपोर्ट कल सुबह भेज दूँगा।", 810],
+  ["Does that work for you?", "क्या यह आपके लिए ठीक है?", 690],
+  ["Let's move on to the roadmap.", "चलिए रोडमैप पर चलते हैं।", 760],
 ];
 
 const src = document.getElementById("src");
 const dst = document.getElementById("dst");
 const lat = document.getElementById("lat");
+const speaker = document.querySelector<HTMLElement>(".tile.speaking");
 const canvas = document.getElementById("wave") as HTMLCanvasElement | null;
 const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-let speaking = 0; // 0..1 drives waveform amplitude
+let level = 0; // 0..1 drives the meter
 
 async function type(el: HTMLElement, text: string, msPerChar: number): Promise<void> {
   el.textContent = "";
@@ -31,48 +37,53 @@ async function run(): Promise<void> {
   if (!src || !dst || !lat) return;
   for (;;) {
     for (const [en, hi, ms] of SCRIPT) {
-      speaking = 1;
+      speaker?.classList.add("speaking");
+      level = 1;
       const typing = type(src, en, 55);
-      // translation starts before the English finishes (speculative), Hindi lands ~ms after the phrase end
       await sleep(Math.max(0, en.length * 55 - 300));
-      speaking = 0.35;
+      level = 0.35;
       await typing;
-      speaking = 0;
+      speaker?.classList.remove("speaking");
+      level = 0;
       await sleep(ms - 300);
       lat.textContent = `${(ms / 1000).toFixed(2)} s`;
-      speaking = 0.8;
+      level = 0.8;
       await type(dst, hi, 40);
-      speaking = 0;
-      await sleep(1400);
+      level = 0;
+      await sleep(1500);
     }
   }
 }
 
-function wave(): void {
+function meter(): void {
   if (!canvas) return;
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
-  const bars = 96;
-  const phase = new Float32Array(bars).map(() => Math.random() * Math.PI * 2);
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  const resize = () => {
+    const r = canvas.getBoundingClientRect();
+    canvas.width = Math.max(1, Math.round(r.width * dpr));
+    canvas.height = Math.max(1, Math.round(r.height * dpr));
+  };
+  resize();
+  addEventListener("resize", resize);
+  const bars = 72;
+  const phase = Float32Array.from({ length: bars }, () => Math.random() * Math.PI * 2);
   let amp = 0;
   let t = 0;
   const draw = () => {
-    t += 0.045;
-    amp += (speaking - amp) * 0.08;
+    t += 0.05;
+    amp += (level - amp) * 0.1;
     const { width: w, height: h } = canvas;
     ctx.clearRect(0, 0, w, h);
     const gap = w / bars;
     for (let i = 0; i < bars; i++) {
-      const env = Math.sin((i / bars) * Math.PI); // taller in the middle
-      const n = 0.5 + 0.5 * Math.sin(t * 2.1 + (phase[i] ?? 0)) * Math.sin(t * 0.7 + i * 0.3);
-      const bh = 4 + (h - 8) * env * (0.06 + amp * n * 0.94);
-      const x = i * gap + gap * 0.3;
-      const g = ctx.createLinearGradient(0, (h - bh) / 2, 0, (h + bh) / 2);
-      g.addColorStop(0, "rgba(108,140,255,0.95)");
-      g.addColorStop(1, "rgba(138,92,242,0.95)");
-      ctx.fillStyle = g;
+      const env = 0.35 + 0.65 * Math.sin((i / bars) * Math.PI);
+      const n = 0.5 + 0.5 * Math.sin(t * 2.3 + (phase[i] ?? 0)) * Math.sin(t * 0.8 + i * 0.35);
+      const bh = Math.max(2 * dpr, (h - 4 * dpr) * env * (0.08 + amp * n * 0.92));
+      ctx.fillStyle = amp > 0.05 ? "#e2552b" : "#c9c1b4";
       ctx.beginPath();
-      ctx.roundRect(x, (h - bh) / 2, gap * 0.4, bh, 3);
+      ctx.roundRect(i * gap + gap * 0.3, (h - bh) / 2, gap * 0.4, bh, 1.5 * dpr);
       ctx.fill();
     }
     if (!reduced) requestAnimationFrame(draw);
@@ -81,8 +92,10 @@ function wave(): void {
 }
 
 function reveal(): void {
-  const els = document.querySelectorAll("section > *, .pipeline li, .lang-grid li, .rm > div");
   if (!("IntersectionObserver" in window)) return;
+  const els = document.querySelectorAll(
+    ".sec-head, .steps li, .lang-list li, .rm li, .numbers > div, .hops, .craft > *, .final > *",
+  );
   for (const el of els) el.classList.add("reveal");
   const io = new IntersectionObserver(
     (entries) => {
@@ -97,6 +110,6 @@ function reveal(): void {
   for (const el of els) io.observe(el);
 }
 
-wave();
+meter();
 reveal();
 void run();
