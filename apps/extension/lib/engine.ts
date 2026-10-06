@@ -77,7 +77,10 @@ export class Engine {
         numberOfInputs: 0,
         outputChannelCount: [1],
       });
-      this.playback.connect(ctx.destination);
+      // Headroom so a full-scale TTS peak plus the "Quiet" original (0.12) never clips the mix.
+      const playbackGain = ctx.createGain();
+      playbackGain.gain.value = 0.85;
+      this.playback.connect(playbackGain).connect(ctx.destination);
       this.playback.port.onmessage = (e: MessageEvent<PlaybackWorkletMessage>) =>
         this.onPlayback(e.data);
 

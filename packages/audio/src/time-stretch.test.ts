@@ -40,7 +40,7 @@ describe("TimeStretcher", () => {
     // Regression: the previous implementation truncated a grain whenever the output block was smaller
     // than the hop, producing a hard discontinuity every block (audible as constant static).
     const maxSineStep = 0.5 * 2 * Math.PI * (440 / 48000);
-    for (const rate of [1.01, 1.1, 1.2, 1.35]) {
+    for (const rate of [1.01, 1.1, 1.2, 1.35, 1.5]) {
       const { out, consumed } = stream(new TimeStretcher(960), sine(48000 * 3), rate, 48000);
       let maxStep = 0;
       for (let i = 1; i < out.length; i++)
@@ -51,7 +51,7 @@ describe("TimeStretcher", () => {
   });
 
   it("preserves pitch and amplitude while speeding up", () => {
-    const { out } = stream(new TimeStretcher(960), sine(48000 * 3), 1.35, 48000 * 2);
+    const { out } = stream(new TimeStretcher(960), sine(48000 * 3), 1.5, 48000 * 2);
     let crossings = 0;
     for (let i = 48001; i < out.length; i++)
       if ((out[i - 1] as number) < 0 !== (out[i] as number) < 0) crossings++;

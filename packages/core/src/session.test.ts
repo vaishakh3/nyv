@@ -384,7 +384,7 @@ describe("TranslationSession", () => {
     session.reportPlayback(2, 1500, 0);
     say("Three.", 2000);
     await settle();
-    expect(speeds).toEqual([undefined, 1.15, undefined]);
+    expect(speeds).toEqual([undefined, 1.2, undefined]);
     await session.stop();
   });
 });
