@@ -11,7 +11,7 @@ export interface CatchUpOptions {
   maxRate: number;
 }
 
-export const DEFAULT_CATCH_UP: CatchUpOptions = { comfortMs: 700, panicMs: 3500, maxRate: 1.35 };
+export const DEFAULT_CATCH_UP: CatchUpOptions = { comfortMs: 700, panicMs: 3000, maxRate: 1.5 };
 
 export function catchUpRate(backlogMs: number, o: CatchUpOptions = DEFAULT_CATCH_UP): number {
   if (backlogMs <= o.comfortMs) return 1;

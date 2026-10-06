@@ -98,8 +98,8 @@ different Groq model; gpt-oss-120b writes slightly better prose but showed 1.6�
 free tier, and qwen3.8-27b is 65 ms to first token yet hallucinates weekdays, so the default stays gpt-oss-20b.
 
 **Backlog control** has two layers. When the listener's queued Hindi exceeds ~1.2 s the relay asks the voice
-to speak faster (linearly up to 1.15× at 4 s behind — a brisk speaker, still natural); the client's
-pitch-preserving time-stretch (up to 1.35×) handles the rest. Both relax as soon as the backlog drains.
+to speak faster (linearly up to 1.2× at 3.5 s behind — a brisk speaker, still natural); the client's
+pitch-preserving time-stretch (WSOLA, up to 1.5×) handles the rest. Both relax as soon as the backlog drains.
 
 **Resilience.** The ASR vendor socket is re-opened with backoff when it drops mid-call: audio arriving in the
 gap is buffered (≤ 15 s) and replayed, and word times are re-based onto the session timeline so segments stay

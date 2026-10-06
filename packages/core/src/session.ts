@@ -482,9 +482,9 @@ function speculationMatches(hypothesis: string, final: string): boolean {
  */
 export function ttsSpeedFor(
   backlogMs: number,
-  comfortMs = 1200,
-  panicMs = 4000,
-  max = 1.15,
+  comfortMs = 1000,
+  panicMs = 3500,
+  max = 1.2,
 ): number {
   if (backlogMs <= comfortMs) return 1;
   const t = Math.min(1, (backlogMs - comfortMs) / (panicMs - comfortMs));

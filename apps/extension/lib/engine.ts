@@ -17,7 +17,8 @@ export interface EngineEvents {
 
 /**
  * Runs inside the offscreen document: tab audio → capture worklet → relay; relay → playback worklet → speakers.
- * The original tab audio is passed through a GainNode so the listener still hears it, ducked while we speak.
+ * The original tab audio is passed through a GainNode: muted while fyv is on by default, or (setting
+ * `originalAudio: "duck"`) kept quietly underneath and ducked further while we speak.
  */
 export class Engine {
   private ctx: AudioContext | undefined;
@@ -63,9 +64,16 @@ export class Engine {
         ctx.audioWorklet.addModule(chrome.runtime.getURL("/worklets/playback.worklet.js")),
       ]);
 
+      // Everything the listener hears goes through a soft limiter: transparent below 0.8, then a
+      // tanh knee, so a translation starting on top of the not-yet-ducked original can't clip.
+      const limiter = ctx.createWaveShaper();
+      limiter.curve = softKneeCurve(0.8);
+      limiter.connect(ctx.destination);
+
       const source = ctx.createMediaStreamSource(stream);
       this.duckGain = ctx.createGain();
-      source.connect(this.duckGain).connect(ctx.destination);
+      this.duckGain.gain.value = settings.originalAudio === "duck" ? 1 : 0;
+      source.connect(this.duckGain).connect(limiter);
 
       const capture = new AudioWorkletNode(ctx, "fyv-capture", { numberOfOutputs: 0 });
       source.connect(capture);
@@ -75,7 +83,9 @@ export class Engine {
         numberOfInputs: 0,
         outputChannelCount: [1],
       });
-      this.playback.connect(ctx.destination);
+      const playbackGain = ctx.createGain();
+      playbackGain.gain.value = 0.85;
+      this.playback.connect(playbackGain).connect(limiter);
       this.playback.port.onmessage = (e: MessageEvent<PlaybackWorkletMessage>) =>
         this.onPlayback(e.data);
 
@@ -302,7 +312,10 @@ export class Engine {
 
   private applyDucking(): void {
     if (!this.duckGain || !this.ctx) return;
-    const { gain, rampMs } = this.ducker.target(performance.now());
+    const { gain, rampMs } =
+      this.settings?.originalAudio === "duck"
+        ? this.ducker.target(performance.now())
+        : { gain: 0, rampMs: 80 };
     const ducking = gain < 1;
     if (ducking !== this.status.ducking) {
       this.status.ducking = ducking;
@@ -330,4 +343,17 @@ export class Engine {
       this.events.onStatus(this.status);
     }, 200);
   }
+}
+
+/** Identity up to ±knee, then tanh-compresses the remaining headroom so the output never exceeds ±1. */
+function softKneeCurve(knee: number, points = 4096): Float32Array<ArrayBuffer> {
+  const curve = new Float32Array(points);
+  const room = 1 - knee;
+  for (let i = 0; i < points; i++) {
+    const x = (i / (points - 1)) * 2 - 1;
+    const a = Math.abs(x);
+    const y = a <= knee ? a : knee + room * Math.tanh((a - knee) / room);
+    curve[i] = Math.sign(x) * y;
+  }
+  return curve;
 }
