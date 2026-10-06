@@ -119,6 +119,12 @@ Endpoints: `GET /healthz`, `GET /metrics` (Prometheus text: sessions, segments, 
 p50/p95/p99 over the last 2000 segments; bearer-protected when `RELAY_TOKENS` is set), `WS /v1/session`.
 Logs are one JSON object per line; each `session.stop` carries the session's segment count and p50.
 
+## Landing page (`apps/web`)
+
+Static Vite site for [nyv.si](https://nyv.si): `pnpm --filter @nyv/web dev` / `build` (output `apps/web/dist`).
+Deployed by connecting the repo to Vercel with **Root Directory = `apps/web`** (framework preset: Vite;
+`apps/web/vercel.json` adds security + cache headers). No build step runs at the repo root.
+
 ## Benchmark & gate
 
 `pnpm bench --runs 3 --baseline tools/bench/baseline.json --tolerance 0.10` prints per-hop percentiles and
