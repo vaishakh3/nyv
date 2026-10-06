@@ -10,7 +10,8 @@
       "!**/node_modules",
       "!apps/extension/public/worklets",
       "!**/*.wasm",
-      "!apps/web/public/people"
+      "!apps/web/public/people",
+      "!apps/extension/store/scenes"
     ]
   },
   "formatter": { "enabled": true, "indentStyle": "space", "indentWidth": 2, "lineWidth": 100 },

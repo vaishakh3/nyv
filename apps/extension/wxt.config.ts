@@ -7,6 +7,7 @@ export default defineConfig({
   manifest: {
     name: "nyv – Live Call Translation",
     description: "Hear Google Meet participants in your language, in real time.",
+    homepage_url: "https://nyv.si",
     permissions: ["tabCapture", "offscreen", "storage", "activeTab"],
     host_permissions: ["https://meet.google.com/*"],
     icons: {
@@ -21,5 +22,6 @@ export default defineConfig({
     },
     minimum_chrome_version: "116",
   },
+  zip: { name: "nyv" },
   vite: () => ({ plugins: [preact()] }),
 });

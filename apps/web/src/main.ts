@@ -3,6 +3,14 @@ import "@fontsource/instrument-serif";
 import "@fontsource/instrument-serif/400-italic.css";
 import "@fontsource/noto-serif-devanagari/500.css";
 
+/**
+ * Chrome Web Store listing. Empty until the listing is published; every "Get the extension" button
+ * (`[data-store]`) falls back to the GitHub quick start in the meantime.
+ */
+const STORE_URL = "";
+if (STORE_URL)
+  for (const a of document.querySelectorAll<HTMLAnchorElement>("[data-store]")) a.href = STORE_URL;
+
 /** Landing-page demo: a scripted EN→HI exchange typed out with realistic timing, plus a level meter. */
 
 const SCRIPT: ReadonlyArray<readonly [string, string, number]> = [

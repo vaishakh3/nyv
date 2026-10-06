@@ -95,6 +95,7 @@ export const serverMessage = z.discriminatedUnion("type", [
       "capacity",
       "too_many_sessions",
       "session_expired",
+      "quota_exceeded",
       "idle",
       "provider_failed",
       "unsupported_language",

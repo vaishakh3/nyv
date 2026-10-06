@@ -1,5 +1,6 @@
 import { createServer, type IncomingMessage } from "node:http";
 import { providersFromEnv } from "@nyv/providers";
+import { Quota } from "./quota.js";
 import { clientIp, RelayServer } from "./server.js";
 
 const env = process.env;
@@ -19,6 +20,8 @@ const origins = new Set(
     .map((o) => o.trim())
     .filter(Boolean),
 );
+/** Hosted mode: translation minutes each token may use per UTC day (0 = unlimited). */
+const quota = new Quota(Number(env.TOKEN_DAILY_MINUTES ?? 0) * 60_000);
 const log = (msg: string, data?: Record<string, unknown>) =>
   console.log(JSON.stringify({ t: new Date().toISOString(), msg, ...data }));
 
@@ -47,12 +50,44 @@ const relay = new RelayServer({
   idleMs: Number(env.IDLE_MINUTES ?? 5) * 60_000,
   authorize,
   trustProxy,
+  identify: presentedToken,
+  quota,
 });
+
+const cors = {
+  "access-control-allow-origin": "*",
+  "access-control-allow-methods": "GET, OPTIONS",
+  "access-control-allow-headers": "authorization",
+};
 
 const http = createServer((req, res) => {
   if (req.url === "/healthz") {
     res.writeHead(200, { "content-type": "application/json" });
     res.end(JSON.stringify({ ok: true, sessions: relay.sessionCount }));
+    return;
+  }
+  if (req.url?.startsWith("/v1/quota")) {
+    // Lets the extension validate an access code and show remaining minutes before capturing a tab.
+    if (req.method === "OPTIONS") {
+      res.writeHead(204, cors).end();
+      return;
+    }
+    const token = presentedToken(req);
+    if (tokens.size > 0 && (token === undefined || !tokens.has(token))) {
+      res.writeHead(401, { "content-type": "application/json", ...cors });
+      res.end(JSON.stringify({ ok: false, error: "invalid_token" }));
+      return;
+    }
+    const remainingMs = token !== undefined ? quota.remainingMs(token) : Number.POSITIVE_INFINITY;
+    res.writeHead(200, { "content-type": "application/json", ...cors });
+    res.end(
+      JSON.stringify({
+        ok: true,
+        dailyMinutes: quota.enabled ? quota.dailyMs / 60_000 : null,
+        remainingMinutes: Number.isFinite(remainingMs) ? Math.floor(remainingMs / 60_000) : null,
+        resetsInMinutes: quota.enabled ? Math.ceil(quota.resetsInMs() / 60_000) : null,
+      }),
+    );
     return;
   }
   if (req.url === "/metrics") {
@@ -77,6 +112,7 @@ http.listen(port, () => {
   log("relay.listening", {
     port,
     auth: tokens.size > 0 ? "token" : "open",
+    dailyMinutes: quota.enabled ? quota.dailyMs / 60_000 : "unlimited",
     origins: origins.size,
     providers: {
       asr: env.ASR_PROVIDER ?? "mock",

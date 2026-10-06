@@ -11,6 +11,7 @@ import { MockAsrProvider, MockMtProvider, MockTtsProvider } from "@nyv/providers
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import WebSocket from "ws";
 import { Metrics } from "./metrics.js";
+import { Quota } from "./quota.js";
 import { RelayServer } from "./server.js";
 
 let url = "";
@@ -221,5 +222,53 @@ describe("Metrics", () => {
     expect(text).toContain('nyv_rejected_total{reason="unauthorized"} 1');
     expect(text).toContain('nyv_perceived_latency_ms{quantile="0.5"} 1100');
     expect(text).toContain("nyv_perceived_latency_ms_count 4");
+  });
+});
+
+describe("RelayServer quota", () => {
+  it("ends a session when the daily budget runs out and refuses the next one", async () => {
+    const quota = new Quota(50);
+    const srv = createServer();
+    const r = new RelayServer({
+      providers: () => ({
+        asr: new MockAsrProvider({ script: [], latencyMs: 5 }),
+        mt: new MockMtProvider({ firstTokenMs: 5, msPerToken: 1 }),
+        tts: new MockTtsProvider({ firstByteMs: 5, msPerChar: 2, chunkMs: 20, sampleRate: 8000 }),
+      }),
+      identify: () => "code-1",
+      quota,
+    });
+    srv.on("upgrade", (req, socket, head) => r.handleUpgrade(req, socket, head));
+    await new Promise<void>((ok) => srv.listen(0, ok));
+    const u = `ws://127.0.0.1:${(srv.address() as AddressInfo).port}/v1/session`;
+    const firstError = async () => {
+      const ws = new WebSocket(u);
+      const m = await new Promise<ServerMessage>((resolve) => {
+        ws.on("message", (data) => {
+          const msg = parseServerMessage(data.toString());
+          if (msg.type === "error") resolve(msg);
+        });
+        ws.on("open", () =>
+          ws.send(
+            JSON.stringify({
+              type: "session.start",
+              config: { sourceLang: "en", targetLang: "hi" },
+            }),
+          ),
+        );
+      });
+      await new Promise<void>((resolve) =>
+        ws.readyState === ws.CLOSED ? resolve() : ws.on("close", () => resolve()),
+      );
+      return m;
+    };
+    const a = await firstError();
+    expect(a.type === "error" && a.code).toBe("quota_exceeded");
+    expect(quota.remainingMs("code-1")).toBe(0);
+    const b = await firstError();
+    expect(b.type === "error" && b.code).toBe("quota_exceeded");
+    expect(r.metrics.rejected.get("quota")).toBe(1);
+    await r.close();
+    srv.close();
   });
 });
