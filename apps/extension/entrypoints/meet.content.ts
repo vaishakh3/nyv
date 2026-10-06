@@ -13,20 +13,21 @@ export default defineContentScript({
         :host { all: initial; }
         .wrap { position: fixed; left: 50%; bottom: 96px; transform: translateX(-50%); z-index: 2147483646;
           max-width: min(860px, 80vw); pointer-events: none; display: flex; flex-direction: column; gap: 6px; align-items: center;
-          font-family: "Google Sans", Roboto, system-ui, sans-serif; transition: opacity .25s; opacity: 0; }
+          font-family: Inter, "Google Sans", Roboto, system-ui, sans-serif; -webkit-font-smoothing: antialiased;
+          transition: opacity .25s, transform .25s; opacity: 0; }
         .wrap.show { opacity: 1; }
-        .line { background: rgba(20,20,24,.82); color: #fff; border-radius: 12px; padding: 10px 16px; line-height: 1.35;
-          box-shadow: 0 6px 24px rgba(0,0,0,.35); backdrop-filter: blur(6px); text-align: center; }
-        .target { font-size: 22px; font-weight: 500; }
-        .target .pending { opacity: .55; }
-        .source { font-size: 14px; color: rgba(255,255,255,.72); }
-        .badge { position: fixed; top: 12px; right: 12px; z-index: 2147483646; font: 500 12px/1 "Google Sans", Roboto, system-ui, sans-serif;
-          color: #fff; background: rgba(20,20,24,.82); border-radius: 999px; padding: 7px 12px; display: flex; gap: 8px; align-items: center;
-          pointer-events: none; opacity: 0; transition: opacity .25s; }
+        .line { background: rgba(28,29,27,.88); color: #f6f7f4; border-radius: 14px; padding: 10px 18px; line-height: 1.35;
+          box-shadow: 0 1px 0 rgba(255,255,255,.06) inset, 0 10px 30px rgba(0,0,0,.35); backdrop-filter: blur(8px); text-align: center; }
+        .target { font-size: 22px; font-weight: 500; letter-spacing: -0.005em; }
+        .target .pending { color: rgba(246,247,244,.45); }
+        .source { font-size: 13.5px; color: rgba(246,247,244,.62); padding: 7px 14px; border-radius: 10px; }
+        .badge { position: fixed; top: 12px; right: 12px; z-index: 2147483646; font: 500 12px/1 Inter, "Google Sans", Roboto, system-ui, sans-serif;
+          color: #f6f7f4; background: rgba(28,29,27,.88); border-radius: 999px; padding: 7px 12px 7px 10px; display: flex; gap: 8px; align-items: center;
+          pointer-events: none; opacity: 0; transition: opacity .25s; backdrop-filter: blur(8px); font-variant-numeric: tabular-nums; }
         .badge.show { opacity: 1; }
-        .dot { width: 8px; height: 8px; border-radius: 50%; background: #34a853; box-shadow: 0 0 0 0 rgba(52,168,83,.6); animation: pulse 1.6s infinite; }
-        .dot.err { background: #ea4335; animation: none; }
-        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(52,168,83,.6);} 100% { box-shadow: 0 0 0 10px rgba(52,168,83,0);} }
+        .dot { width: 7px; height: 7px; border-radius: 50%; background: #4fae74; box-shadow: 0 0 0 0 rgba(79,174,116,.6); animation: pulse 1.8s ease-out infinite; }
+        .dot.err { background: #e2552b; animation: none; }
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(79,174,116,.5);} 100% { box-shadow: 0 0 0 7px rgba(79,174,116,0);} }
       </style>
       <div class="badge"><span class="dot"></span><span class="label">fyv</span></div>
       <div class="wrap"><div class="line target"></div><div class="line source"></div></div>`;

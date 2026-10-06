@@ -1,9 +1,10 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><link rel="stylesheet" href="meet.css"><link rel="stylesheet" href="../../entrypoints/popup/style.css">
+<!doctype html><html lang="en"><head><meta charset="utf-8"><link rel="stylesheet" href="../../node_modules/@fontsource-variable/inter/wght.css"><link rel="stylesheet" href="../../node_modules/@fontsource/instrument-serif/latin-400-italic.css"><link rel="stylesheet" href="meet.css"><link rel="stylesheet" href="../../entrypoints/popup/style.css">
 <style>
   body { width: 1280px; height: 800px; }
   .popup-anchor { position: absolute; top: 8px; right: 16px; z-index: 5; }
-  .popup-anchor .app { width: 340px; background: var(--bg); color: var(--fg); border-radius: 12px; box-shadow: 0 24px 60px rgba(0,0,0,.55), 0 0 0 1px rgba(255,255,255,.08); font: 14px/1.4 "Google Sans", Inter, system-ui, sans-serif; }
-  .popup-anchor .logo { background-image: url("../../public/icons/icon-32.png"); }
+  .popup-anchor .app { width: 360px; background: var(--paper); color: var(--ink); border-radius: 14px; box-shadow: 0 24px 60px rgba(0,0,0,.55), 0 0 0 1px rgba(255,255,255,.08); font: 400 13.5px/1.45 var(--sans); -webkit-font-smoothing: antialiased; }
+  .popup-anchor .cap { position: static; transform: none; max-width: none; align-items: stretch; text-align: left; }
+  .popup-anchor .level i:nth-child(1) { height: 40%; } .popup-anchor .level i:nth-child(2) { height: 75%; } .popup-anchor .level i:nth-child(3) { height: 100%; } .popup-anchor .level i:nth-child(4) { height: 80%; } .popup-anchor .level i:nth-child(5) { height: 55%; }
   .badge { display: none; }
   .tile.speaking::after { display: none; }
 </style></head><body>
@@ -26,14 +27,15 @@
 <div class="badge"><span class="dot"></span><span>fyv · 0.7s</span></div>
 
 <div class="popup-anchor"><div class="app">
-  <header><h1><span class="logo"></span> fyv</h1><span class="pill idle"><span class="dot"></span>idle</span></header>
-  <div class="langs">
-    <label>They speak<select><option>English</option></select></label>
-    <button type="button" class="swap">⇄</button>
-    <label>I hear<select><option>हिन्दी</option></select></label>
-  </div>
-  <label>Access code<input value="fyv-beta-7k2m"><span class="access ok">74 of 90 min left today</span></label>
-  <button type="button" class="primary">Translate this call</button>
-  <details><summary>Advanced</summary></details>
+  <header class="top"><div class="brand"><span class="mark"></span><span class="word">fyv</span></div><span class="state idle"><i class="dot"></i>Ready</span></header>
+  <section class="pair">
+    <div class="field"><span class="k">They speak</span><span class="select"><select><option>English</option></select><svg viewBox="0 0 16 16"><path d="M4 6l4 4 4-4"/></svg></span></div>
+    <button type="button" class="swap"><svg viewBox="0 0 16 16"><path d="M2.5 5.5h11M10.5 2.5l3 3-3 3M13.5 10.5h-11M5.5 7.5l-3 3 3 3"/></svg></button>
+    <div class="field"><span class="k">I hear</span><span class="select"><select><option>हिन्दी · Hindi</option></select><svg viewBox="0 0 16 16"><path d="M4 6l4 4 4-4"/></svg></span></div>
+  </section>
+  <div class="field code"><span class="k">Access code</span><span class="input ok"><input value="fyv-beta-7k2m"><svg viewBox="0 0 16 16"><path d="M3 8.5l3 3 7-7"/></svg></span><span class="note ok">74 of 90 min left today</span></div>
+  <button type="button" class="cta">Translate this call<svg viewBox="0 0 16 16"><path d="M3 8h10M9 4l4 4-4 4"/></svg></button>
+  <p class="hint">You'll hear Hindi over the call, with captions on the Meet page.</p>
+  <details class="advanced"><summary>Advanced<svg viewBox="0 0 16 16"><path d="M4 6l4 4 4-4"/></svg></summary></details>
 </div></div>
 </body></html>
