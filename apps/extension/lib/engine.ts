@@ -244,8 +244,13 @@ export class Engine {
         else console.warn("[fyv] relay:", m.code, m.message);
         break;
       case "session.stopped":
-        // The server ended the session (limits, idle, shutdown); a dropped socket goes through reconnect instead.
-        if (this.status.state === "active") void this.stop();
+        // Limits (quota/idle/lifetime) arrive as a fatal `error` first, so by now we're already in `error`.
+        // A graceful relay restart (deploy) should be invisible to the listener: reconnect to the new instance.
+        if (this.status.state !== "active") break;
+        if (m.reason === "server_shutdown") {
+          this.relay?.close();
+          void this.reconnect(this.epoch, "relay restarting");
+        } else void this.stop();
         break;
       default:
         break;
@@ -264,7 +269,9 @@ export class Engine {
       return;
     }
     const held = this.lastTarget && now - this.lastTarget.at < 6000 ? this.lastTarget : undefined;
-    this.events.onCaption(held ? { ...c, target: held.text, final: held.final } : { ...c });
+    this.events.onCaption(
+      held ? { ...c, target: held.text, final: held.final, held: true } : { ...c },
+    );
   }
 
   private onRelayAudio(f: AudioFrame): void {

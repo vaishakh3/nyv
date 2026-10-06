@@ -13,6 +13,8 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@fontsource-variable/inter": "^5.3.0",
+    "@fontsource/instrument-serif": "^5.3.0",
     "@fyv/audio": "workspace:*",
     "@fyv/protocol": "workspace:*",
     "preact": "^10.25.0"
