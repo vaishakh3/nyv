@@ -19,7 +19,7 @@ interface Marker {
  */
 class PlaybackProcessor extends AudioWorkletProcessor {
   private readonly ring = new RingBuffer(sampleRate * 30);
-  private readonly stretcher = new TimeStretcher(512);
+  private readonly stretcher = new TimeStretcher(Math.round((sampleRate * 0.02) / 4) * 4);
   private readonly smoother = new RateSmoother(0.01);
   private readonly markers: Marker[] = [];
   private written = 0;
@@ -28,6 +28,7 @@ class PlaybackProcessor extends AudioWorkletProcessor {
   private playing = false;
   private lastStatusTime = 0;
   private scratch = new Float32Array(0);
+  private last = 0;
 
   constructor() {
     super();
@@ -64,7 +65,7 @@ class PlaybackProcessor extends AudioWorkletProcessor {
 
     if (!this.primed) {
       if (backlogMs < PRIME_MS) {
-        out.fill(0);
+        this.fadeOut(out);
         this.setPlaying(false);
         this.maybeStatus(backlogMs, 1);
         return true;
@@ -72,7 +73,8 @@ class PlaybackProcessor extends AudioWorkletProcessor {
       this.primed = true;
     }
     if (this.ring.length === 0) {
-      out.fill(0);
+      this.fadeOut(out);
+      this.stretcher.reset();
       this.primed = false;
       this.setPlaying(false);
       this.maybeStatus(0, 1);
@@ -80,20 +82,35 @@ class PlaybackProcessor extends AudioWorkletProcessor {
     }
 
     const rate = this.smoother.update(catchUpRate(backlogMs, DEFAULT_CATCH_UP));
-    const needed = this.stretcher.inputNeeded(out.length, rate);
-    if (this.scratch.length < needed) this.scratch = new Float32Array(needed);
-    const avail = this.ring.peek(this.scratch.subarray(0, needed));
-    const consumedNow = this.stretcher.process(
-      this.scratch.subarray(0, Math.max(avail, 1)),
-      out,
-      rate,
-    );
-    this.ring.skip(consumedNow);
+    let consumedNow: number;
+    if (rate === 1 && this.stretcher.pending() === 0) {
+      // Fast path: no stretching needed and nothing half-synthesized, so copy straight from the
+      // ring. Avoids the stretcher's ~30 ms look-ahead, which would fade into zeros whenever the
+      // buffer is nearly empty (the normal state while TTS streams in at about real time).
+      this.stretcher.reset();
+      consumedNow = this.ring.read(out);
+      if (consumedNow < out.length)
+        this.fadeOut(out.subarray(consumedNow), out[consumedNow - 1] as number);
+    } else {
+      const needed = this.stretcher.inputNeeded(out.length, rate);
+      if (this.scratch.length < needed) this.scratch = new Float32Array(needed);
+      const avail = this.ring.peek(this.scratch.subarray(0, needed));
+      consumedNow = this.stretcher.process(this.scratch.subarray(0, Math.max(avail, 1)), out, rate);
+      this.ring.skip(consumedNow);
+    }
+    this.last = out[out.length - 1] as number;
     this.announceMarkers(this.consumed, this.consumed + consumedNow);
     this.consumed += consumedNow;
     this.setPlaying(true);
     this.maybeStatus(backlogMs, rate);
     return true;
+  }
+
+  /** Ramps from the last emitted sample to silence instead of cutting hard (an audible click). */
+  private fadeOut(out: Float32Array, from = this.last): void {
+    const n = out.length;
+    for (let i = 0; i < n; i++) out[i] = from * (1 - (i + 1) / n);
+    this.last = 0;
   }
 
   private announceMarkers(from: number, to: number): void {

@@ -42,6 +42,8 @@ export interface Settings {
   sourceLang: SessionConfig["sourceLang"];
   targetLang: SessionConfig["targetLang"];
   captions: boolean;
+  /** What the listener hears of the untranslated call audio while fyv is on. */
+  originalAudio: "mute" | "duck";
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -50,6 +52,7 @@ export const DEFAULT_SETTINGS: Settings = {
   sourceLang: "en",
   targetLang: "hi",
   captions: true,
+  originalAudio: "mute",
 };
 
 /** popup → background */

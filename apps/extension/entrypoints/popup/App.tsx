@@ -235,6 +235,23 @@ export function App() {
         </div>
       </section>
 
+      <div class="opt">
+        <span class="k">Original voice</span>
+        <div class="seg">
+          {(["mute", "duck"] as const).map((v) => (
+            <button
+              key={v}
+              type="button"
+              aria-pressed={settings.originalAudio === v}
+              class={settings.originalAudio === v ? "on" : ""}
+              onClick={() => update({ originalAudio: v })}
+            >
+              {v === "mute" ? "Muted" : "Quiet"}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {running ? (
         <section class="live" aria-live="polite">
           <div class="live-bar">
@@ -288,7 +305,13 @@ export function App() {
             </div>
             <div
               class={`level ${status.ducking ? "ducking" : ""}`}
-              title={status.ducking ? "Original voice ducked" : "Original voice level"}
+              title={
+                status.ducking
+                  ? settings.originalAudio === "mute"
+                    ? "Original voice muted"
+                    : "Original voice ducked"
+                  : "Original voice level"
+              }
             >
               {LEVEL_BARS.map((h) => (
                 <i key={h} style={{ height: `${Math.max(0.12, level * h) * 100}%` }} />

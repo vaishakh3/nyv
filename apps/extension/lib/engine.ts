@@ -17,7 +17,8 @@ export interface EngineEvents {
 
 /**
  * Runs inside the offscreen document: tab audio → capture worklet → relay; relay → playback worklet → speakers.
- * The original tab audio is passed through a GainNode so the listener still hears it, ducked while we speak.
+ * The original tab audio is passed through a GainNode: muted while fyv is on by default, or (setting
+ * `originalAudio: "duck"`) kept quietly underneath and ducked further while we speak.
  */
 export class Engine {
   private ctx: AudioContext | undefined;
@@ -65,6 +66,7 @@ export class Engine {
 
       const source = ctx.createMediaStreamSource(stream);
       this.duckGain = ctx.createGain();
+      this.duckGain.gain.value = settings.originalAudio === "duck" ? 1 : 0;
       source.connect(this.duckGain).connect(ctx.destination);
 
       const capture = new AudioWorkletNode(ctx, "fyv-capture", { numberOfOutputs: 0 });
@@ -302,7 +304,10 @@ export class Engine {
 
   private applyDucking(): void {
     if (!this.duckGain || !this.ctx) return;
-    const { gain, rampMs } = this.ducker.target(performance.now());
+    const { gain, rampMs } =
+      this.settings?.originalAudio === "duck"
+        ? this.ducker.target(performance.now())
+        : { gain: 0, rampMs: 80 };
     const ducking = gain < 1;
     if (ducking !== this.status.ducking) {
       this.status.ducking = ducking;
