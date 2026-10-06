@@ -1,0 +1,185 @@
+/* Shared Meet-like stage used only to render Web Store screenshots (not shipped in the extension). */
+* {
+  box-sizing: border-box;
+}
+html,
+body {
+  margin: 0;
+}
+body {
+  width: 1280px;
+  height: 800px;
+  overflow: hidden;
+  background: #202124;
+  font-family: "Google Sans", Roboto, Inter, system-ui, sans-serif;
+  color: #e8eaed;
+  position: relative;
+}
+.grid {
+  position: absolute;
+  inset: 16px 16px 88px;
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 12px;
+}
+.tile {
+  position: relative;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #3c4043;
+}
+.tile.big {
+  grid-row: 1 / 3;
+}
+.tile img {
+  position: absolute;
+  left: 50%;
+  bottom: -6%;
+  height: 112%;
+  transform: translateX(-50%);
+}
+.tile.big img {
+  height: 104%;
+  bottom: -4%;
+}
+.tile.t1 {
+  background: #d9ded6;
+}
+.tile.t2 {
+  background: #e4d6cb;
+}
+.tile.t3 {
+  background: #cfd6de;
+}
+.tile.speaking::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border: 3px solid #8ab4f8;
+  border-radius: 12px;
+  pointer-events: none;
+}
+.tile .name {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.5);
+  padding: 4px 10px;
+  border-radius: 6px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.tile .name svg {
+  width: 14px;
+  height: 14px;
+}
+.bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 72px;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  padding: 0 24px;
+  font-size: 14px;
+}
+.bar .meta {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  color: #e8eaed;
+}
+.bar .meta span + span::before {
+  content: "|";
+  margin-right: 12px;
+  color: #5f6368;
+}
+.ctrls {
+  display: flex;
+  gap: 10px;
+}
+.ctrl {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #3c4043;
+  display: grid;
+  place-items: center;
+}
+.ctrl.off {
+  background: #ea4335;
+}
+.ctrl svg {
+  width: 20px;
+  height: 20px;
+  fill: #fff;
+}
+.right {
+  justify-self: end;
+  display: flex;
+  gap: 14px;
+}
+.right .ctrl {
+  background: transparent;
+}
+/* nyv overlay (mirrors meet.content.ts) */
+.badge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  font:
+    500 12px / 1 "Google Sans",
+    Roboto,
+    system-ui,
+    sans-serif;
+  color: #fff;
+  background: rgba(20, 20, 24, 0.82);
+  border-radius: 999px;
+  padding: 7px 12px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.badge .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #34a853;
+  box-shadow: 0 0 0 6px rgba(52, 168, 83, 0.25);
+}
+.cap {
+  position: absolute;
+  left: 50%;
+  bottom: 96px;
+  transform: translateX(-50%);
+  max-width: 860px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: center;
+}
+.cap .line {
+  background: rgba(20, 20, 24, 0.82);
+  color: #fff;
+  border-radius: 12px;
+  padding: 10px 16px;
+  line-height: 1.35;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
+  text-align: center;
+}
+.cap .target {
+  font-size: 22px;
+  font-weight: 500;
+  font-family: "Noto Sans Devanagari", "Noto Serif Devanagari", "Google Sans", sans-serif;
+}
+.cap .source {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.72);
+}

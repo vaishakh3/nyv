@@ -12,6 +12,7 @@ import {
 } from "@nyv/protocol";
 import { type WebSocket, WebSocketServer } from "ws";
 import { Metrics } from "./metrics.js";
+import type { Quota } from "./quota.js";
 
 export interface RelayOptions {
   providers: () => Providers;
@@ -28,6 +29,10 @@ export interface RelayOptions {
   authorize?: (req: IncomingMessage) => boolean;
   /** Use X-Forwarded-For for the client IP (behind a trusted proxy / load balancer). */
   trustProxy?: boolean;
+  /** Names the principal (access code) a connection belongs to, for `quota`. */
+  identify?: (req: IncomingMessage) => string | undefined;
+  /** Daily per-principal budget; sessions are refused or ended when it runs out. */
+  quota?: Quota;
 }
 
 export function clientIp(req: IncomingMessage, trustProxy: boolean): string {
@@ -46,6 +51,7 @@ export class RelayServer {
   private readonly sessions = new Map<WebSocket, TranslationSession>();
   private readonly perIp = new Map<string, number>();
   private readonly ipOf = new Map<WebSocket, string>();
+  private readonly principalOf = new Map<WebSocket, { principal: string; startedAt: number }>();
   private readonly log: NonNullable<RelayOptions["log"]>;
 
   constructor(private readonly opts: RelayOptions) {
@@ -77,6 +83,7 @@ export class RelayServer {
   private onConnection(ws: WebSocket, req: IncomingMessage): void {
     const connId = randomUUID().slice(0, 8);
     const ip = clientIp(req, this.opts.trustProxy ?? false);
+    const principal = this.opts.identify?.(req);
     this.log("ws.open", { connId, ip });
     let seq = 0;
     let lastAudioAt = Date.now();
@@ -90,7 +97,7 @@ export class RelayServer {
       if (m.type === "error") this.metrics.errorsTotal++;
       if (ws.readyState === ws.OPEN) ws.send(JSON.stringify(m));
     };
-    const endWith = (code: "session_expired" | "idle", message: string) => {
+    const endWith = (code: "session_expired" | "idle" | "quota_exceeded", message: string) => {
       send({ type: "error", code, message, fatal: true });
       void this.stopSession(ws, code).then(() => ws.close(1000, code));
     };
@@ -151,6 +158,22 @@ export class RelayServer {
             this.metrics.reject("per_ip");
             return;
           }
+          const quota = this.opts.quota;
+          const remainingMs =
+            quota?.enabled && principal !== undefined
+              ? quota.remainingMs(principal)
+              : Number.POSITIVE_INFINITY;
+          if (remainingMs <= 0) {
+            send({
+              type: "error",
+              code: "quota_exceeded",
+              message: "today's translation minutes for this access code are used up",
+              fatal: true,
+            });
+            ws.close(1008, "quota_exceeded");
+            this.metrics.reject("quota");
+            return;
+          }
           const s = new TranslationSession(
             { sessionId: connId, config: msg.config, providers: this.opts.providers() },
             {
@@ -172,6 +195,15 @@ export class RelayServer {
           );
           this.sessions.set(ws, s);
           this.ipOf.set(ws, ip);
+          if (principal !== undefined)
+            this.principalOf.set(ws, { principal, startedAt: Date.now() });
+          if (Number.isFinite(remainingMs))
+            timers.push(
+              setTimeout(
+                () => endWith("quota_exceeded", "today's translation minutes are used up"),
+                remainingMs,
+              ),
+            );
           this.perIp.set(ip, (this.perIp.get(ip) ?? 0) + 1);
           this.metrics.sessionsActive++;
           this.metrics.sessionsTotal++;
@@ -235,6 +267,11 @@ export class RelayServer {
       if (n <= 0) this.perIp.delete(ip);
       else this.perIp.set(ip, n);
       this.ipOf.delete(ws);
+    }
+    const p = this.principalOf.get(ws);
+    if (p) {
+      this.principalOf.delete(ws);
+      this.opts.quota?.consume(p.principal, Date.now() - p.startedAt);
     }
     this.metrics.sessionsActive--;
     await s.stop(reason);

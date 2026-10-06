@@ -1,3 +1,4 @@
+import { checkAccess } from "../lib/access.js";
 import type {
   Broadcast,
   ContentMessage,
@@ -50,6 +51,8 @@ export default defineBackground(() => {
 
 async function start(tabId: number, settings: Settings): Promise<void> {
   if (activeTabId !== undefined && activeTabId !== tabId) await stop();
+  // Fail fast on a bad/exhausted access code before we take over the tab's audio.
+  await checkAccess(settings.relayUrl, settings.relayToken);
   await ensureOffscreen();
   const streamId = await new Promise<string>((resolve, reject) =>
     chrome.tabCapture.getMediaStreamId({ targetTabId: tabId }, (id) =>

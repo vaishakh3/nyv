@@ -30,9 +30,12 @@ export interface Caption {
   final: boolean;
 }
 
+/** The hosted nyv relay (Fly.io, `apps/relay`). Self-hosters point `relayUrl` elsewhere under Advanced. */
+export const HOSTED_RELAY_URL = "wss://relay.nyv.si/v1/session";
+
 export interface Settings {
   relayUrl: string;
-  /** Bearer token for relays started with RELAY_TOKENS; sent as `?token=`. */
+  /** Access code for the hosted relay (a RELAY_TOKENS entry); sent as `?token=`. */
   relayToken: string;
   sourceLang: SessionConfig["sourceLang"];
   targetLang: SessionConfig["targetLang"];
@@ -40,7 +43,7 @@ export interface Settings {
 }
 
 export const DEFAULT_SETTINGS: Settings = {
-  relayUrl: "ws://localhost:8787/v1/session",
+  relayUrl: HOSTED_RELAY_URL,
   relayToken: "",
   sourceLang: "en",
   targetLang: "hi",

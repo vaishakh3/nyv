@@ -1,4 +1,4 @@
-# fly launch --no-deploy --copy-config; then: fly secrets set DEEPGRAM_API_KEY=... GROQ_API_KEY=... OPENAI_API_KEY=... ELEVENLABS_API_KEY=... RELAY_TOKENS=...
+# fly launch --no-deploy --copy-config; then: fly secrets set DEEPGRAM_API_KEY=... GROQ_API_KEY=... OPENAI_API_KEY=... ELEVENLABS_API_KEY=... RELAY_TOKENS=<comma-separated access codes>
 app = "nyv-relay"
 primary_region = "bom"
 
@@ -14,6 +14,8 @@ primary_region = "bom"
   TTS_PROVIDER = "elevenlabs"
   MAX_SESSIONS = "50"
   MAX_SESSIONS_PER_IP = "3"
+  # Hosted beta: translation minutes per access code per UTC day (bounds vendor spend if a code leaks).
+  TOKEN_DAILY_MINUTES = "90"
   TRUST_PROXY = "1"
 
 [http_service]

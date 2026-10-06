@@ -160,6 +160,17 @@ input {
   color: var(--muted);
   margin-top: 4px;
 }
+.access {
+  font-size: 11px;
+  text-transform: none;
+  letter-spacing: 0;
+}
+.access.ok {
+  color: var(--ok);
+}
+.access.bad {
+  color: var(--err);
+}
 .error {
   color: var(--err);
   font-size: 12px;

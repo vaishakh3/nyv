@@ -830,6 +830,147 @@ footer a:hover {
   color: var(--ink);
 }
 
+/* ---------- document pages (privacy) ---------- */
+.doc {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: clamp(32px, 6vw, 72px) var(--gutter) clamp(64px, 8vw, 120px);
+}
+.doc p,
+.doc li,
+.doc dd {
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--ink-2);
+}
+.doc p + p {
+  margin-top: 12px;
+}
+.doc a {
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: var(--rule-2, var(--rule));
+}
+.doc a:hover {
+  text-decoration-color: var(--accent);
+}
+.doc b {
+  color: var(--ink);
+  font-weight: 600;
+}
+.doc code {
+  font:
+    500 0.9em / 1 ui-monospace,
+    "SF Mono",
+    Menlo,
+    monospace;
+  background: var(--paper-2);
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  padding: 2px 6px;
+  color: var(--ink);
+}
+.doc-head {
+  margin-bottom: clamp(40px, 6vw, 64px);
+}
+.doc .eyebrow {
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin: 0 0 14px;
+}
+.doc h1 {
+  font-size: clamp(36px, 5.2vw, 60px);
+  line-height: 1.02;
+  margin: 0 0 22px;
+}
+.doc h1 em {
+  display: block;
+}
+.doc .lede {
+  font-size: clamp(17px, 1.5vw, 20px);
+  color: var(--ink-2);
+  max-width: 60ch;
+}
+.doc section {
+  padding: 28px 0 8px;
+  border-top: 1px solid var(--rule);
+}
+.doc h2 {
+  font-size: clamp(22px, 2.4vw, 28px);
+  line-height: 1.15;
+  margin: 0 0 14px;
+}
+.facts,
+.chain {
+  margin: 0;
+  padding-left: 0;
+  list-style: none;
+  display: grid;
+  gap: 12px;
+}
+.facts li {
+  padding-left: 22px;
+  position: relative;
+}
+.facts li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.62em;
+  width: 10px;
+  height: 2px;
+  background: var(--accent);
+}
+.chain {
+  counter-reset: hop;
+  margin: 14px 0;
+}
+.chain li {
+  counter-increment: hop;
+  padding-left: 36px;
+  position: relative;
+}
+.chain li::before {
+  content: counter(hop);
+  position: absolute;
+  left: 0;
+  top: 0.15em;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 1px solid var(--rule);
+  background: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  display: grid;
+  place-items: center;
+  color: var(--ink);
+}
+.perms {
+  margin: 18px 0 0;
+  display: grid;
+  grid-template-columns: minmax(150px, 200px) 1fr;
+  gap: 14px 24px;
+}
+.perms dt {
+  padding-top: 2px;
+}
+.perms dd {
+  margin: 0;
+}
+@media (max-width: 640px) {
+  .perms {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+  .perms dd {
+    margin-bottom: 10px;
+  }
+}
+
 /* ---------- reveal ---------- */
 .reveal {
   opacity: 0;

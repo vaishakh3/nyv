@@ -1,5 +1,6 @@
 import { LANGUAGES, type LanguageCode } from "@nyv/protocol";
 import { useEffect, useState } from "preact/hooks";
+import { type AccessInfo, checkAccess, describeAccess } from "../../lib/access.js";
 import {
   type Caption,
   DEFAULT_SETTINGS,
@@ -18,6 +19,7 @@ export function App() {
   const [tab, setTab] = useState<chrome.tabs.Tab | undefined>();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | undefined>();
+  const [access, setAccess] = useState<{ text: string; ok: boolean } | undefined>();
 
   useEffect(() => {
     chrome.storage.sync
@@ -39,6 +41,28 @@ export function App() {
     setSettings(next);
     void chrome.storage.sync.set({ settings: next });
   };
+
+  // Validate the access code (debounced) whenever it or the relay changes, so the user sees
+  // "42 of 90 min left today" or "not recognised" before pressing Translate.
+  useEffect(() => {
+    if (!settings.relayToken) {
+      setAccess(undefined);
+      return;
+    }
+    let live = true;
+    const t = setTimeout(() => {
+      checkAccess(settings.relayUrl, settings.relayToken).then(
+        (a: AccessInfo | undefined) =>
+          live && setAccess({ text: describeAccess(a), ok: (a?.remainingMinutes ?? 1) > 0 }),
+        (e: unknown) =>
+          live && setAccess({ text: e instanceof Error ? e.message : String(e), ok: false }),
+      );
+    }, 400);
+    return () => {
+      live = false;
+      clearTimeout(t);
+    };
+  }, [settings.relayToken, settings.relayUrl]);
 
   const onMeet = !!tab?.url?.startsWith("https://meet.google.com/");
   const capturable = !!tab?.url && /^https?:/.test(tab.url);
@@ -124,10 +148,28 @@ export function App() {
         </label>
       </div>
 
+      {!running && (
+        <label>
+          Access code
+          <input
+            value={settings.relayToken}
+            placeholder="from your nyv invite"
+            autocomplete="off"
+            spellcheck={false}
+            onInput={(e) => update({ relayToken: (e.currentTarget as HTMLInputElement).value })}
+          />
+          {access && <span class={`access ${access.ok ? "ok" : "bad"}`}>{access.text}</span>}
+        </label>
+      )}
+
       <button
         type="button"
         class={`primary ${running ? "stop" : ""}`}
-        disabled={busy || (!running && !capturable) || settings.sourceLang === settings.targetLang}
+        disabled={
+          busy ||
+          (!running && (!capturable || !settings.relayToken)) ||
+          settings.sourceLang === settings.targetLang
+        }
         onClick={toggle}
       >
         {running ? "Stop translating" : onMeet ? "Translate this call" : "Translate this tab"}
@@ -185,16 +227,7 @@ export function App() {
               onChange={(e) => update({ relayUrl: (e.currentTarget as HTMLInputElement).value })}
             />
           </label>
-          <label>
-            Relay token
-            <input
-              type="password"
-              value={settings.relayToken}
-              disabled={running}
-              placeholder="only if the relay requires one"
-              onChange={(e) => update({ relayToken: (e.currentTarget as HTMLInputElement).value })}
-            />
-          </label>
+          <div class="hint">Self-hosting? Point this at your own relay (see the README).</div>
         </div>
       </details>
     </div>
