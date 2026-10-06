@@ -15,6 +15,14 @@ export interface RelayClientEvents {
 }
 
 /** Thin WebSocket client: binary frames out/in, JSON control, clock offset via ping/pong. */
+/** Appends the relay token as a query parameter (browsers cannot set headers on WebSocket upgrades). */
+export function relayUrlWithToken(url: string, token: string): string {
+  if (!token) return url;
+  const u = new URL(url);
+  u.searchParams.set("token", token);
+  return u.toString();
+}
+
 export class RelayClient {
   private ws: WebSocket | undefined;
   private seq = 0;
@@ -77,7 +85,7 @@ export class RelayClient {
   }
 
   speechEnd(): void {
-    this.sendJson({ type: "speech.end" });
+    this.sendJson({ type: "speech.end", tsMs: performance.now() });
   }
 
   /** Report playback start in client time; converted to relay time when the clock offset is known. */
@@ -86,7 +94,7 @@ export class RelayClient {
     this.sendJson({
       type: "trace.playback",
       segmentId,
-      playbackStartTsMs: playbackStartPerfMs + this.offsetMs,
+      playbackStartTsMs: Math.max(0, playbackStartPerfMs + this.offsetMs),
       backlogMs,
     });
   }

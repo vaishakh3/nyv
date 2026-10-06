@@ -68,18 +68,20 @@ export class Segmenter {
   handle(event: AsrEvent): void {
     switch (event.type) {
       case "partial": {
-        const fresh = this.la.push(event.words.map((w) => w.word));
+        const words = this.unemitted(event.words);
+        const fresh = this.la.push(words.map((w) => w.word));
         const committedNow = this.la.committed;
-        this.committedWords.push(...event.words.slice(committedNow - fresh.length, committedNow));
-        this.unstable = event.words.slice(committedNow);
+        this.committedWords.push(...words.slice(committedNow - fresh.length, committedNow));
+        this.unstable = words.slice(committedNow);
         this.afterCommit();
         break;
       }
       case "final": {
-        this.la.finalize(event.words.map((w) => w.word));
+        const words = this.unemitted(event.words);
+        this.la.finalize(words.map((w) => w.word));
         // Replace whatever partial words we had for this chunk with the vendor's final ones.
         const chunkStart = this.committedChunkStart;
-        this.committedWords = [...this.committedWords.slice(0, chunkStart), ...event.words];
+        this.committedWords = [...this.committedWords.slice(0, chunkStart), ...words];
         this.committedChunkStart = this.committedWords.length;
         this.unstable = [];
         this.afterCommit();
@@ -91,24 +93,54 @@ export class Segmenter {
         break;
       case "error":
       case "closed":
-        this.flush();
+        this.flush(true);
         break;
     }
   }
 
   /** Index into committedWords where the current (unfinalized) ASR chunk begins. */
   private committedChunkStart = 0;
+  /** Audio time up to which words have already been shipped in a segment, and the last word shipped. */
+  private emittedUntilMs = 0;
+  private lastEmittedWord = "";
+
+  /**
+   * Vendors re-send the whole chunk (partials and the final alike) even after we closed a segment in
+   * the middle of it; drop the words we have already translated. Interim timings for the last word of
+   * a hypothesis are truncated (the word was still being spoken), so besides the time overlap test we
+   * also drop a leading word that repeats the last shipped word within a word's length of it.
+   */
+  private unemitted(words: readonly AsrWord[]): AsrWord[] {
+    if (!this.lastEmittedWord) return [...words];
+    let i = 0;
+    while (i < words.length) {
+      const w = words[i] as AsrWord;
+      const overlaps = w.startMs + 40 < this.emittedUntilMs;
+      // Every earlier word was dropped, so this is the chunk's first surviving word.
+      const repeats =
+        w.startMs < this.emittedUntilMs + 400 && normalize(w.word) === this.lastEmittedWord;
+      if (!overlaps && !repeats) break;
+      i++;
+    }
+    return i === 0 ? [...words] : words.slice(i);
+  }
 
   /** Client-side VAD saw silence. */
   speechEnded(): void {
     this.flush();
   }
 
-  /** Force-close the open segment, if any. */
-  flush(): void {
+  /**
+   * Force-close the open segment, if any. The unstable tail is normally dropped rather than translated
+   * as a guess; pass `includeUnstable` when no better hypothesis can arrive (stream ended).
+   */
+  flush(includeUnstable = false): void {
     this.clearPauseTimer();
+    if (includeUnstable && this.unstable.length > 0) {
+      this.committedWords = [...this.committedWords, ...this.unstable];
+      this.unstable = [];
+    }
     if (this.committedWords.length === 0) {
-      // Nothing stable; drop the unstable tail rather than translate a guess.
       this.unstable = [];
       return;
     }
@@ -119,6 +151,8 @@ export class Segmenter {
     this.la.reset();
     const last = words[words.length - 1] as AsrWord;
     const first = words[0] as AsrWord;
+    this.emittedUntilMs = Math.max(this.emittedUntilMs, last.endMs);
+    this.lastEmittedWord = normalize(last.word);
     this.events.onSegment({
       id: this.nextId++,
       text: joinWords(words),
@@ -199,6 +233,8 @@ export class Segmenter {
     }
   }
 }
+
+const normalize = (w: string) => w.toLowerCase().replace(/[^\p{L}\p{N}]/gu, "");
 
 export function joinWords(words: readonly AsrWord[]): string {
   return words

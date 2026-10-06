@@ -58,7 +58,9 @@ export default defineContentScript({
           ? `nyv · ${s.latency ? `${(s.latency.p50 / 1000).toFixed(1)}s` : "listening"}${s.rate > 1.02 ? ` · ${s.rate.toFixed(2)}×` : ""}`
           : s.state === "error"
             ? `nyv · ${s.error ?? "error"}`
-            : "nyv · connecting";
+            : s.state === "reconnecting"
+              ? "nyv · reconnecting…"
+              : "nyv · connecting";
       if (s.state === "idle") wrap.classList.remove("show");
     };
 

@@ -62,7 +62,7 @@ export class MockAsrProvider implements AsrProvider {
     const emitLine = (line: MockScriptLine) => {
       const words = wordsFromText(
         line.text,
-        line.atMs - (line.text.split(/\s+/).length * 1000) / wps,
+        Math.max(0, line.atMs - (line.text.split(/\s+/).length * 1000) / wps),
         1000 / wps,
       );
       if (this.opts.partials ?? true) {

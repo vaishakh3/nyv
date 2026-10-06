@@ -1,6 +1,6 @@
 import type { SessionConfig } from "@nyv/protocol";
 
-export type EngineState = "idle" | "connecting" | "active" | "error";
+export type EngineState = "idle" | "connecting" | "active" | "reconnecting" | "error";
 
 export interface Status {
   state: EngineState;
@@ -32,6 +32,8 @@ export interface Caption {
 
 export interface Settings {
   relayUrl: string;
+  /** Bearer token for relays started with RELAY_TOKENS; sent as `?token=`. */
+  relayToken: string;
   sourceLang: SessionConfig["sourceLang"];
   targetLang: SessionConfig["targetLang"];
   captions: boolean;
@@ -39,6 +41,7 @@ export interface Settings {
 
 export const DEFAULT_SETTINGS: Settings = {
   relayUrl: "ws://localhost:8787/v1/session",
+  relayToken: "",
   sourceLang: "en",
   targetLang: "hi",
   captions: true,

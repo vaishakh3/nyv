@@ -5,6 +5,11 @@ export interface OpenAiMtOptions {
   apiKey: string;
   model?: string;
   baseUrl?: string;
+  /** Prefix for the provider name, e.g. "groq". */
+  label?: string;
+  /** Extra JSON merged into the request body (e.g. `reasoning_effort` for gpt-oss models). */
+  extraBody?: Record<string, unknown>;
+  maxTokens?: number;
 }
 
 /**
@@ -15,7 +20,21 @@ export class OpenAiMtProvider implements MtProvider {
   readonly name: string;
   constructor(private readonly opts: OpenAiMtOptions) {
     if (!opts.apiKey) throw new Error("OPENAI_API_KEY is required");
-    this.name = `openai:${opts.model ?? "gpt-4o-mini"}`;
+    this.name = `${opts.label ?? "openai"}:${opts.model ?? "gpt-4o-mini"}`;
+  }
+
+  /** One cheap GET keeps a connection in undici's pool for the first real request. */
+  warm(): void {
+    void fetch(`${this.base}/models`, {
+      method: "GET",
+      headers: { authorization: `Bearer ${this.opts.apiKey}` },
+    })
+      .then((r) => r.body?.cancel())
+      .catch(() => undefined);
+  }
+
+  private get base(): string {
+    return this.opts.baseUrl ?? "https://api.openai.com/v1";
   }
 
   async translate(
@@ -23,23 +42,22 @@ export class OpenAiMtProvider implements MtProvider {
     onToken: (t: string) => void,
     signal?: AbortSignal,
   ): Promise<string> {
-    const res = await fetch(
-      `${this.opts.baseUrl ?? "https://api.openai.com/v1"}/chat/completions`,
-      {
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
-          authorization: `Bearer ${this.opts.apiKey}`,
-        },
-        body: JSON.stringify({
-          model: this.opts.model ?? "gpt-4o-mini",
-          stream: true,
-          temperature: 0.2,
-          messages: buildMessages(req),
-        }),
-        ...(signal ? { signal } : {}),
+    const res = await fetch(`${this.base}/chat/completions`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${this.opts.apiKey}`,
       },
-    );
+      body: JSON.stringify({
+        model: this.opts.model ?? "gpt-4o-mini",
+        stream: true,
+        temperature: 0.2,
+        max_tokens: this.opts.maxTokens ?? 400,
+        ...this.opts.extraBody,
+        messages: buildMessages(req),
+      }),
+      ...(signal ? { signal } : {}),
+    });
     if (!res.ok || !res.body) throw new Error(`openai ${res.status}: ${await res.text()}`);
 
     let full = "";
