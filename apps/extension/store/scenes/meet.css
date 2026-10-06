@@ -134,25 +134,22 @@ body {
   position: absolute;
   top: 12px;
   right: 12px;
-  font:
-    500 12px / 1 "Google Sans",
-    Roboto,
-    system-ui,
-    sans-serif;
-  color: #fff;
-  background: rgba(20, 20, 24, 0.82);
+  font: 500 12px / 1 var(--sans, Inter, system-ui, sans-serif);
+  font-variant-numeric: tabular-nums;
+  color: #f6f7f4;
+  background: rgba(28, 29, 27, 0.88);
   border-radius: 999px;
-  padding: 7px 12px;
+  padding: 7px 12px 7px 10px;
   display: flex;
   gap: 8px;
   align-items: center;
 }
 .badge .dot {
-  width: 8px;
-  height: 8px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
-  background: #34a853;
-  box-shadow: 0 0 0 6px rgba(52, 168, 83, 0.25);
+  background: #4fae74;
+  box-shadow: 0 0 0 5px rgba(79, 174, 116, 0.22);
 }
 .cap {
   position: absolute;
@@ -164,22 +161,27 @@ body {
   flex-direction: column;
   gap: 6px;
   align-items: center;
+  font-family: var(--sans, Inter, system-ui, sans-serif);
 }
 .cap .line {
-  background: rgba(20, 20, 24, 0.82);
-  color: #fff;
-  border-radius: 12px;
-  padding: 10px 16px;
+  background: rgba(28, 29, 27, 0.88);
+  color: #f6f7f4;
+  border-radius: 14px;
+  padding: 10px 18px;
   line-height: 1.35;
-  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.06) inset,
+    0 10px 30px rgba(0, 0, 0, 0.35);
   text-align: center;
 }
 .cap .target {
   font-size: 22px;
   font-weight: 500;
-  font-family: "Noto Sans Devanagari", "Noto Serif Devanagari", "Google Sans", sans-serif;
+  font-family: "Noto Sans Devanagari", "Noto Serif Devanagari", var(--sans, sans-serif);
 }
 .cap .source {
-  font-size: 14px;
-  color: rgba(255, 255, 255, 0.72);
+  font-size: 13.5px;
+  color: rgba(246, 247, 244, 0.62);
+  padding: 7px 14px;
+  border-radius: 10px;
 }

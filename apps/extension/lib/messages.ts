@@ -28,6 +28,8 @@ export interface Caption {
   source: string;
   target: string;
   final: boolean;
+  /** `target` is the previous segment's translation, held while `source` streams in for the next one. */
+  held?: boolean;
 }
 
 /** The hosted fyv relay (Fly.io, `apps/relay`). Self-hosters point `relayUrl` elsewhere under Advanced. */

@@ -36,7 +36,11 @@ export default defineBackground(() => {
         );
         return true;
       case "stop":
-        stop().then(() => sendResponse({ ok: true }));
+        stop().then(
+          () => sendResponse({ ok: true }),
+          (err) =>
+            sendResponse({ ok: false, error: err instanceof Error ? err.message : String(err) }),
+        );
         return true;
       case "getStatus":
         sendResponse(status);

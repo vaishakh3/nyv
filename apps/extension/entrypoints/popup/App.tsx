@@ -4,13 +4,90 @@ import { type AccessInfo, checkAccess, describeAccess } from "../../lib/access.j
 import {
   type Caption,
   DEFAULT_SETTINGS,
+  type EngineState,
   IDLE_STATUS,
   type PopupCommand,
   type Settings,
   type Status,
 } from "../../lib/messages.js";
 
-const send = <T,>(m: PopupCommand) => chrome.runtime.sendMessage(m) as Promise<T>;
+/** Background round-trip with a deadline so a wedged worker can't leave the button spinning forever. */
+const send = <T,>(m: PopupCommand, timeoutMs = 10_000) =>
+  Promise.race([
+    chrome.runtime.sendMessage(m) as Promise<T>,
+    new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error("fyv didn't respond — try again")), timeoutMs),
+    ),
+  ]);
+
+const STATE_LABEL: Record<EngineState, string> = {
+  idle: "Ready",
+  connecting: "Connecting",
+  active: "Live",
+  reconnecting: "Reconnecting",
+  error: "Error",
+};
+
+const Icon = {
+  chevron: () => (
+    <svg viewBox="0 0 16 16" aria-hidden="true">
+      <path d="M4 6l4 4 4-4" />
+    </svg>
+  ),
+  swap: () => (
+    <svg viewBox="0 0 16 16" aria-hidden="true">
+      <path d="M2.5 5.5h11M10.5 2.5l3 3-3 3M13.5 10.5h-11M5.5 7.5l-3 3 3 3" />
+    </svg>
+  ),
+  arrow: () => (
+    <svg viewBox="0 0 16 16" aria-hidden="true">
+      <path d="M3 8h10M9 4l4 4-4 4" />
+    </svg>
+  ),
+  check: () => (
+    <svg viewBox="0 0 16 16" aria-hidden="true">
+      <path d="M3 8.5l3 3 7-7" />
+    </svg>
+  ),
+  alert: () => (
+    <svg viewBox="0 0 16 16" aria-hidden="true">
+      <circle cx="8" cy="8" r="6" />
+      <path d="M8 5v3.5M8 11h.01" />
+    </svg>
+  ),
+};
+
+const VENDORS: Record<string, string> = {
+  deepgram: "Deepgram",
+  groq: "Groq",
+  openai: "OpenAI",
+  elevenlabs: "ElevenLabs",
+  mock: "Mock",
+};
+
+/** "deepgram-flux|deepgram" / "groq:openai/gpt-oss-20b→openai:gpt-4o-mini" → "Deepgram" / "Groq". */
+/** Engine errors are terse and technical; the popup shows what happened and what to do next. */
+const humanizeError = (e?: string): string | undefined => {
+  if (!e) return undefined;
+  if (e.startsWith("relay disconnected"))
+    return "Lost the connection to the relay. Press Translate to resume.";
+  if (e.startsWith("relay: ")) return e.slice(7);
+  return e;
+};
+
+const vendor = (provider: string) => {
+  const key =
+    provider
+      .split(/[|:→/-]/)[0]
+      ?.trim()
+      .toLowerCase() ?? "";
+  return VENDORS[key] ?? key;
+};
+
+/** Mic level (dBFS, −90 = silence) → 0..1 for the live level bars. */
+const levelFraction = (dbfs: number) => Math.max(0, Math.min(1, (dbfs + 54) / 48));
+
+const LEVEL_BARS = [0.35, 0.7, 1, 0.8, 0.5];
 
 export function App() {
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
@@ -72,6 +149,14 @@ export function App() {
   const capturable = !!tab?.url && /^https?:/.test(tab.url);
   const running =
     status.state === "active" || status.state === "connecting" || status.state === "reconnecting";
+  const samePair = settings.sourceLang === settings.targetLang;
+  const target = LANGUAGES[settings.targetLang as LanguageCode];
+  const source = LANGUAGES[settings.sourceLang as LanguageCode];
+  const reconnecting = status.state === "reconnecting";
+  const shownError = error ?? (reconnecting ? undefined : humanizeError(status.error));
+  const pillState: EngineState = shownError && status.state === "idle" ? "error" : status.state;
+  const level = levelFraction(status.level);
+  const tabTitle = tab?.title?.replace(/^Meet\s[-–]\s/, "").trim();
 
   const toggle = async () => {
     setBusy(true);
@@ -94,144 +179,200 @@ export function App() {
     }
   };
 
+  const langSelect = (key: "sourceLang" | "targetLang", native: boolean) => (
+    <span class="select">
+      <select
+        value={settings[key]}
+        disabled={running}
+        aria-label={key === "sourceLang" ? "They speak" : "I hear"}
+        onChange={(e) =>
+          update({ [key]: (e.currentTarget as HTMLSelectElement).value as LanguageCode })
+        }
+      >
+        {Object.entries(LANGUAGES).map(([code, l]) => (
+          <option key={code} value={code}>
+            {native ? l.native : l.name}
+          </option>
+        ))}
+      </select>
+      <Icon.chevron />
+    </span>
+  );
+
   return (
-    <div class="app">
-      <header>
-        <h1>
-          <span class="logo" /> fyv
-        </h1>
-        <span class={`pill ${status.state}`}>
-          <span class="dot" />
-          {status.state === "active" ? "live" : status.state}
+    <div class={`app ${running ? "is-running" : ""}`}>
+      <header class="top">
+        <div class="brand">
+          <span class="mark" aria-hidden="true" />
+          <span class="word">fyv</span>
+        </div>
+        <span class={`state ${pillState}`}>
+          <i class="dot" />
+          {STATE_LABEL[pillState]}
         </span>
       </header>
 
-      <div class="langs">
-        <label>
-          They speak
-          <select
-            value={settings.sourceLang}
-            disabled={running}
-            onChange={(e) =>
-              update({ sourceLang: (e.currentTarget as HTMLSelectElement).value as LanguageCode })
-            }
-          >
-            {Object.entries(LANGUAGES).map(([code, l]) => (
-              <option key={code} value={code}>
-                {l.name}
-              </option>
-            ))}
-          </select>
-        </label>
+      <section class="pair" aria-label="Language pair">
+        <div class="field">
+          <span class="k">They speak</span>
+          {langSelect("sourceLang", false)}
+        </div>
         <button
           type="button"
           class="swap"
-          title="Swap"
+          title="Swap languages"
+          aria-label="Swap languages"
           disabled={running}
           onClick={() =>
             update({ sourceLang: settings.targetLang, targetLang: settings.sourceLang })
           }
         >
-          ⇄
+          <Icon.swap />
         </button>
-        <label>
-          I hear
-          <select
-            value={settings.targetLang}
-            disabled={running}
-            onChange={(e) =>
-              update({ targetLang: (e.currentTarget as HTMLSelectElement).value as LanguageCode })
-            }
-          >
-            {Object.entries(LANGUAGES).map(([code, l]) => (
-              <option key={code} value={code}>
-                {l.native}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
+        <div class="field">
+          <span class="k">I hear</span>
+          {langSelect("targetLang", true)}
+        </div>
+      </section>
 
-      {!running && (
-        <label>
-          Access code
-          <input
-            value={settings.relayToken}
-            placeholder="from your fyv invite"
-            autocomplete="off"
-            spellcheck={false}
-            onInput={(e) => update({ relayToken: (e.currentTarget as HTMLInputElement).value })}
-          />
-          {access && <span class={`access ${access.ok ? "ok" : "bad"}`}>{access.text}</span>}
-        </label>
+      {running ? (
+        <section class="live" aria-live="polite">
+          <div class="live-bar">
+            <span class={`live-tag ${status.state}`}>
+              <i class="dot" />
+              {status.state === "active"
+                ? `${source.name} → ${target.name}`
+                : STATE_LABEL[status.state]}
+            </span>
+            <span class="live-tab" title={tabTitle}>
+              {onMeet ? "Google Meet" : tabTitle || "this tab"}
+            </span>
+          </div>
+          <div class="cap">
+            {caption?.target ? (
+              <>
+                <p
+                  class={`t ${caption.final ? "" : "pending"} ${caption.held ? "held" : ""}`}
+                  lang={settings.targetLang}
+                >
+                  {caption.target}
+                </p>
+                {caption.source && (
+                  <p class={`s ${caption.held ? "incoming" : ""}`} lang={settings.sourceLang}>
+                    {caption.source}
+                    {caption.held && <i class="caret" />}
+                  </p>
+                )}
+              </>
+            ) : (
+              <p class="waiting">
+                {status.state === "active" ? "Listening for speech" : "Connecting to the relay"}
+                <i class="caret" />
+              </p>
+            )}
+          </div>
+          <div class="meter">
+            <div class="m">
+              <span class="k">latency</span>
+              <b class={status.latency && status.latency.p50 > 1500 ? "slow" : ""}>
+                {status.latency ? `${(status.latency.p50 / 1000).toFixed(1)}s` : "—"}
+              </b>
+            </div>
+            <div class="m">
+              <span class="k">behind</span>
+              <b>{`${(status.backlogMs / 1000).toFixed(1)}s`}</b>
+            </div>
+            <div class="m">
+              <span class="k">speed</span>
+              <b>{status.rate > 1.02 ? `${status.rate.toFixed(2)}×` : "1.00×"}</b>
+            </div>
+            <div
+              class={`level ${status.ducking ? "ducking" : ""}`}
+              title={status.ducking ? "Original voice ducked" : "Original voice level"}
+            >
+              {LEVEL_BARS.map((h) => (
+                <i key={h} style={{ height: `${Math.max(0.12, level * h) * 100}%` }} />
+              ))}
+            </div>
+          </div>
+        </section>
+      ) : (
+        <div class="field code">
+          <span class="k">Access code</span>
+          <span class={`input ${access ? (access.ok ? "ok" : "bad") : ""}`}>
+            <input
+              value={settings.relayToken}
+              placeholder="from your fyv invite"
+              autocomplete="off"
+              spellcheck={false}
+              onInput={(e) => update({ relayToken: (e.currentTarget as HTMLInputElement).value })}
+            />
+            {access && (access.ok ? <Icon.check /> : <Icon.alert />)}
+          </span>
+          {access && <span class={`note ${access.ok ? "ok" : "bad"}`}>{access.text}</span>}
+        </div>
       )}
 
       <button
         type="button"
-        class={`primary ${running ? "stop" : ""}`}
-        disabled={
-          busy ||
-          (!running && (!capturable || !settings.relayToken)) ||
-          settings.sourceLang === settings.targetLang
-        }
+        class={`cta ${running ? "stop" : ""}`}
+        disabled={busy || (!running && (!capturable || !settings.relayToken)) || samePair}
         onClick={toggle}
       >
-        {running ? "Stop translating" : onMeet ? "Translate this call" : "Translate this tab"}
+        {running ? (
+          "Stop translating"
+        ) : (
+          <>
+            {onMeet ? "Translate this call" : "Translate this tab"}
+            <Icon.arrow />
+          </>
+        )}
       </button>
-      {!capturable && !running && (
-        <div class="hint">
-          Open a Google Meet call (or any tab playing speech), then click Translate.
-        </div>
-      )}
-      {capturable && !onMeet && !running && (
-        <div class="hint">Works on any tab with audio; in-call captions overlay is Meet-only.</div>
-      )}
-      {(error || status.error) && <div class="error">{error ?? status.error}</div>}
 
-      {running && (
-        <>
-          <div class="stats">
-            <div class="stat">
-              <b>{status.latency ? `${(status.latency.p50 / 1000).toFixed(1)}s` : "–"}</b>
-              <span>latency p50</span>
-            </div>
-            <div class="stat">
-              <b>{`${(status.backlogMs / 1000).toFixed(1)}s`}</b>
-              <span>backlog</span>
-            </div>
-            <div class="stat">
-              <b>
-                {status.rate > 1.02
-                  ? `${status.rate.toFixed(2)}×`
-                  : status.ducking
-                    ? "ducked"
-                    : "1.00×"}
-              </b>
-              <span>playback</span>
-            </div>
-          </div>
-          <div class="caption">
-            <div class="t">{caption?.target || <span class="hint">Waiting for speech…</span>}</div>
-            {caption?.source && <div class="s">{caption.source}</div>}
-          </div>
-          {status.providers && (
-            <div class="hint">{`${status.providers.asr} · ${status.providers.mt} · ${status.providers.tts}`}</div>
-          )}
-        </>
+      {shownError && (
+        <p class="alert">
+          <Icon.alert />
+          {shownError}
+        </p>
+      )}
+      {reconnecting && !shownError && (
+        <p class="hint warn">Connection dropped — reconnecting, audio keeps playing.</p>
+      )}
+      {!running && !shownError && (
+        <p class="hint">
+          {samePair
+            ? "Pick two different languages."
+            : !capturable
+              ? "Open a Google Meet call, or any tab playing speech, then come back here."
+              : onMeet
+                ? `You'll hear ${target.name} over the call, with captions on the Meet page.`
+                : `You'll hear ${target.name} over this tab's audio. In-call captions are Meet-only.`}
+        </p>
+      )}
+      {running && status.providers && (
+        <p class="hint providers" title={Object.values(status.providers).join(" · ")}>
+          {[status.providers.asr, status.providers.mt, status.providers.tts]
+            .map(vendor)
+            .join(" · ")}
+        </p>
       )}
 
-      <details>
-        <summary>Advanced</summary>
-        <div>
-          <label>
-            Relay URL
+      <details class="advanced">
+        <summary>
+          Advanced
+          <Icon.chevron />
+        </summary>
+        <div class="field">
+          <span class="k">Relay URL</span>
+          <span class="input">
             <input
               value={settings.relayUrl}
               disabled={running}
+              spellcheck={false}
               onChange={(e) => update({ relayUrl: (e.currentTarget as HTMLInputElement).value })}
             />
-          </label>
-          <div class="hint">Self-hosting? Point this at your own relay (see the README).</div>
+          </span>
+          <span class="note">Self-hosting? Point this at your own relay (see the README).</span>
         </div>
       </details>
     </div>
