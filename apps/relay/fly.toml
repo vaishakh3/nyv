@@ -1,5 +1,5 @@
 # fly launch --no-deploy --copy-config; then: fly secrets set DEEPGRAM_API_KEY=... GROQ_API_KEY=... OPENAI_API_KEY=... ELEVENLABS_API_KEY=... RELAY_TOKENS=<comma-separated access codes>
-app = "nyv-relay"
+app = "fyv-relay"
 primary_region = "bom"
 
 [build]

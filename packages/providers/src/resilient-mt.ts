@@ -1,4 +1,4 @@
-import type { MtProvider, MtRequest } from "@nyv/core";
+import type { MtProvider, MtRequest } from "@fyv/core";
 
 export interface ResilientMtOptions {
   /** Retry the primary once after this delay when it fails before producing a token (429, 5xx, network). */

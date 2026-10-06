@@ -1,4 +1,4 @@
-import type { HopTimings } from "@nyv/protocol";
+import type { HopTimings } from "@fyv/protocol";
 
 /** Relay-wide counters plus a rolling window of perceived latencies, rendered in Prometheus text format. */
 export class Metrics {
@@ -30,24 +30,24 @@ export class Metrics {
 
   render(): string {
     const lines = [
-      "# TYPE nyv_sessions_active gauge",
-      `nyv_sessions_active ${this.sessionsActive}`,
-      "# TYPE nyv_sessions_total counter",
-      `nyv_sessions_total ${this.sessionsTotal}`,
-      "# TYPE nyv_segments_total counter",
-      `nyv_segments_total ${this.segmentsTotal}`,
-      "# TYPE nyv_errors_total counter",
-      `nyv_errors_total ${this.errorsTotal}`,
-      "# TYPE nyv_rejected_total counter",
+      "# TYPE fyv_sessions_active gauge",
+      `fyv_sessions_active ${this.sessionsActive}`,
+      "# TYPE fyv_sessions_total counter",
+      `fyv_sessions_total ${this.sessionsTotal}`,
+      "# TYPE fyv_segments_total counter",
+      `fyv_segments_total ${this.segmentsTotal}`,
+      "# TYPE fyv_errors_total counter",
+      `fyv_errors_total ${this.errorsTotal}`,
+      "# TYPE fyv_rejected_total counter",
     ];
     for (const [reason, n] of this.rejected)
-      lines.push(`nyv_rejected_total{reason="${reason}"} ${n}`);
-    lines.push("# TYPE nyv_perceived_latency_ms summary");
+      lines.push(`fyv_rejected_total{reason="${reason}"} ${n}`);
+    lines.push("# TYPE fyv_perceived_latency_ms summary");
     for (const q of [0.5, 0.95, 0.99]) {
       const v = this.quantile(q);
-      if (v !== undefined) lines.push(`nyv_perceived_latency_ms{quantile="${q}"} ${Math.round(v)}`);
+      if (v !== undefined) lines.push(`fyv_perceived_latency_ms{quantile="${q}"} ${Math.round(v)}`);
     }
-    lines.push(`nyv_perceived_latency_ms_count ${this.e2e.length}`);
+    lines.push(`fyv_perceived_latency_ms_count ${this.e2e.length}`);
     return `${lines.join("\n")}\n`;
   }
 }

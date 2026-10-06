@@ -24,7 +24,7 @@ jobs:
       - run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm test
-      - run: pnpm --filter @nyv/extension build
+      - run: pnpm --filter @fyv/extension build
       - name: Latency regression gate (mock providers)
         run: pnpm bench --runs 3 --speed 4 --baseline tools/bench/baseline.json --tolerance 0.15 --out bench-result.json
       - uses: actions/upload-artifact@v4

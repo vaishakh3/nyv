@@ -1,5 +1,5 @@
-import type { TtsOptions, TtsProvider } from "@nyv/core";
-import type { LanguageCode } from "@nyv/protocol";
+import type { TtsOptions, TtsProvider } from "@fyv/core";
+import type { LanguageCode } from "@fyv/protocol";
 import { base64ToBytes, bytesToInt16 } from "./pcm.js";
 
 export interface ElevenLabsOptions {

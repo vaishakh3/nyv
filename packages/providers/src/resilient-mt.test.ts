@@ -1,4 +1,4 @@
-import type { MtProvider, MtRequest } from "@nyv/core";
+import type { MtProvider, MtRequest } from "@fyv/core";
 import { describe, expect, it } from "vitest";
 import { ResilientMtProvider } from "./resilient-mt.js";
 

@@ -1,4 +1,4 @@
-import type { AsrProvider, MtProvider, Providers, TtsProvider } from "@nyv/core";
+import type { AsrProvider, MtProvider, Providers, TtsProvider } from "@fyv/core";
 import { DeepgramAsrProvider } from "./deepgram.js";
 import { DeepgramFluxAsrProvider } from "./deepgram-flux.js";
 import { ElevenLabsTtsProvider } from "./elevenlabs.js";

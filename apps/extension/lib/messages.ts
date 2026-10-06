@@ -1,4 +1,4 @@
-import type { SessionConfig } from "@nyv/protocol";
+import type { SessionConfig } from "@fyv/protocol";
 
 export type EngineState = "idle" | "connecting" | "active" | "reconnecting" | "error";
 
@@ -30,8 +30,8 @@ export interface Caption {
   final: boolean;
 }
 
-/** The hosted nyv relay (Fly.io, `apps/relay`). Self-hosters point `relayUrl` elsewhere under Advanced. */
-export const HOSTED_RELAY_URL = "wss://relay.nyv.si/v1/session";
+/** The hosted fyv relay (Fly.io, `apps/relay`). Self-hosters point `relayUrl` elsewhere under Advanced. */
+export const HOSTED_RELAY_URL = "wss://relay.fyv.si/v1/session";
 
 export interface Settings {
   relayUrl: string;

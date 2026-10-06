@@ -3,13 +3,13 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>nyv — hear every call in your language</title>
-    <meta name="description" content="nyv translates live video calls speech-to-speech in under a second. A Chrome extension for Google Meet today; a desktop app for every call tool next." />
+    <title>fyv — hear every call in your language</title>
+    <meta name="description" content="fyv translates live video calls speech-to-speech in under a second. A Chrome extension for Google Meet today; a desktop app for every call tool next." />
     <meta name="theme-color" content="#eff1ed" />
-    <meta property="og:title" content="nyv — hear every call in your language" />
+    <meta property="og:title" content="fyv — hear every call in your language" />
     <meta property="og:description" content="Real-time speech-to-speech translation for live calls. Under a second from the end of a phrase to translated speech." />
     <meta property="og:image" content="/icon.png" />
-    <meta property="og:url" content="https://nyv.si" />
+    <meta property="og:url" content="https://fyv.si" />
     <meta name="twitter:card" content="summary" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/icon.png" />
@@ -18,9 +18,9 @@
   <body>
     <a class="skip" href="#main">Skip to content</a>
     <header class="nav">
-      <a class="brand" href="/" aria-label="nyv home">
+      <a class="brand" href="/" aria-label="fyv home">
         <svg width="26" height="26" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="14" fill="#15130f"/><g fill="#f7f4ee"><rect x="12" y="23" width="6" height="18" rx="3"/><rect x="21.5" y="16" width="6" height="32" rx="3"/><rect x="36.5" y="16" width="6" height="32" rx="3"/><rect x="46" y="23" width="6" height="18" rx="3"/></g><rect x="29" y="9" width="6" height="46" rx="3" fill="#e2552b"/></svg>
-        <span>nyv</span>
+        <span>fyv</span>
       </a>
       <nav aria-label="Primary">
         <a href="#how">How it works</a>
@@ -28,7 +28,7 @@
         <a href="#languages">Languages</a>
         <a href="#roadmap">Roadmap</a>
       </nav>
-      <a class="btn small" data-store href="https://github.com/vaishakh3/nyv#quick-start" rel="noopener">Get the extension</a>
+      <a class="btn small" data-store href="https://github.com/vaishakh3/fyv#quick-start" rel="noopener">Get the extension</a>
     </header>
 
     <main id="main">
@@ -41,7 +41,7 @@
             while they are still talking. Nothing to install on their side.
           </p>
           <div class="cta">
-            <a class="btn" data-store href="https://github.com/vaishakh3/nyv#quick-start" rel="noopener">Get the Chrome extension</a>
+            <a class="btn" data-store href="https://github.com/vaishakh3/fyv#quick-start" rel="noopener">Get the Chrome extension</a>
             <a class="link" href="#how">How it works <span aria-hidden="true">→</span></a>
           </div>
         </div>
@@ -76,7 +76,7 @@
             </div>
           </div>
           <figcaption class="meter">
-            <span class="meter-label"><span class="live" aria-hidden="true"></span>nyv</span>
+            <span class="meter-label"><span class="live" aria-hidden="true"></span>fyv</span>
             <canvas id="wave" width="640" height="36" aria-hidden="true"></canvas>
             <span class="meter-lat">phrase end → voice <b id="lat">0.74 s</b></span>
           </figcaption>
@@ -94,7 +94,7 @@
           <p class="kicker">How it works</p>
           <h2>It never waits for the sentence to end.</h2>
           <p class="sub">
-            Human interpreters start speaking before the speaker finishes. So does nyv: every stage streams
+            Human interpreters start speaking before the speaker finishes. So does fyv: every stage streams
             into the next, and each of them is on while the one before it is still working.
           </p>
         </header>
@@ -146,15 +146,15 @@
             benchmark runs on every change and fails the build if the median moves. The whole pipeline is
             open source.
           </p>
-          <a class="link" href="https://github.com/vaishakh3/nyv" rel="noopener">Read the source on GitHub <span aria-hidden="true">→</span></a>
+          <a class="link" href="https://github.com/vaishakh3/fyv" rel="noopener">Read the source on GitHub <span aria-hidden="true">→</span></a>
         </div>
         <table class="bench">
           <caption>32-second continuous English monologue, real vendors, phrase end → translated speech</caption>
           <thead><tr><th scope="col">Pipeline</th><th scope="col">p50</th><th scope="col">p95</th></tr></thead>
           <tbody>
-            <tr class="now"><th scope="row">nyv today</th><td>0.86 s</td><td>1.6 s</td></tr>
-            <tr><th scope="row">nyv, first release</th><td>1.10 s</td><td>2.2 s</td></tr>
-            <tr><th scope="row">nyv, v0 (gpt-4o-mini)</th><td>1.6 s</td><td>—</td></tr>
+            <tr class="now"><th scope="row">fyv today</th><td>0.86 s</td><td>1.6 s</td></tr>
+            <tr><th scope="row">fyv, first release</th><td>1.10 s</td><td>2.2 s</td></tr>
+            <tr><th scope="row">fyv, v0 (gpt-4o-mini)</th><td>1.6 s</td><td>—</td></tr>
           </tbody>
         </table>
       </section>
@@ -167,20 +167,20 @@
         <ol class="rm">
           <li class="now"><span class="when">Now</span><h3>Chrome extension for Google Meet</h3><p>You hear them in your language. Works on any tab with audio.</p></li>
           <li><span class="when">Next</span><h3>Speak back</h3><p>They hear you in theirs — your voice, their words.</p></li>
-          <li><span class="when">Then</span><h3>Desktop app</h3><p>A virtual microphone and speaker, so nyv works in Zoom, Teams, Discord — everywhere.</p></li>
+          <li><span class="when">Then</span><h3>Desktop app</h3><p>A virtual microphone and speaker, so fyv works in Zoom, Teams, Discord — everywhere.</p></li>
         </ol>
       </section>
 
       <section class="final">
         <h2>Stop losing people <em>to language.</em></h2>
-        <a class="btn" data-store href="https://github.com/vaishakh3/nyv#quick-start" rel="noopener">Get the Chrome extension</a>
+        <a class="btn" data-store href="https://github.com/vaishakh3/fyv#quick-start" rel="noopener">Get the Chrome extension</a>
         <p class="fine">Free during the beta with an access code. Open source under MIT — or run your own relay.</p>
       </section>
     </main>
 
     <footer>
-      <span>nyv · <a href="https://nyv.si">nyv.si</a> · <a href="/privacy">Privacy</a></span>
-      <span><a href="https://github.com/vaishakh3/nyv" rel="noopener">GitHub</a> · MIT licence</span>
+      <span>fyv · <a href="https://fyv.si">fyv.si</a> · <a href="/privacy">Privacy</a></span>
+      <span><a href="https://github.com/vaishakh3/fyv" rel="noopener">GitHub</a> · MIT licence</span>
     </footer>
     <script type="module" src="/src/main.ts"></script>
   </body>

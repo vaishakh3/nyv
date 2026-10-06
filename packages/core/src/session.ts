@@ -1,4 +1,4 @@
-import type { LanguageCode, ServerMessage, SessionConfig } from "@nyv/protocol";
+import type { LanguageCode, ServerMessage, SessionConfig } from "@fyv/protocol";
 import { AudioSequencer } from "./audio-sequencer.js";
 import { AudioTimeline } from "./audio-timeline.js";
 import { type Clock, SessionClock } from "./clock.js";

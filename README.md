@@ -1,4 +1,4 @@
-# nyv
+# fyv
 
 Real-time speech-to-speech translation for video calls. One participant speaks English; the other hears
 Hindi (or Spanish, French, German, Japanese, Portuguese) about a second and a half later, with bilingual captions.
@@ -44,12 +44,12 @@ The latency edge is in the pipeline, not the models:
 corepack enable && pnpm install
 pnpm check                       # lint + typecheck + tests
 pnpm bench                       # end-to-end latency table against mock providers
-pnpm --filter @nyv/relay dev  # relay on :8787 with mock providers
-pnpm --filter @nyv/extension build
+pnpm --filter @fyv/relay dev  # relay on :8787 with mock providers
+pnpm --filter @fyv/extension build
 ```
 
 Load `apps/extension/dist/chrome-mv3` via `chrome://extensions` → *Load unpacked*, open a Google Meet
-(or any tab playing speech), click the nyv icon → **Translate this call**. With mock providers you will hear
+(or any tab playing speech), click the fyv icon → **Translate this call**. With mock providers you will hear
 tones and see a scripted transcript — the point is to exercise the full audio path and measure latency.
 
 ## Real providers
@@ -64,7 +64,7 @@ MT_FALLBACK_PROVIDER=openai OPENAI_API_KEY=... # takes over a segment when Groq 
 TTS_PROVIDER=elevenlabs ELEVENLABS_API_KEY=... # ELEVENLABS_VOICE_ID (free tier: premade voices only)
 ```
 
-Then `pnpm --filter @nyv/relay dev`, and benchmark with a real recording: `pnpm bench --wav sample-16k.wav`.
+Then `pnpm --filter @fyv/relay dev`, and benchmark with a real recording: `pnpm bench --wav sample-16k.wav`.
 
 ### Measured (real vendors, 32 s continuous EN monologue, 11 sentences, few pauses)
 
@@ -121,7 +121,7 @@ Logs are one JSON object per line; each `session.stop` carries the session's seg
 
 ## Landing page (`apps/web`)
 
-Static Vite site for [nyv.si](https://nyv.si): `pnpm --filter @nyv/web dev` / `build` (output `apps/web/dist`).
+Static Vite site for [fyv.si](https://fyv.si): `pnpm --filter @fyv/web dev` / `build` (output `apps/web/dist`).
 Deployed by connecting the repo to Vercel with **Root Directory = `apps/web`** (framework preset: Vite;
 `apps/web/vercel.json` adds security + cache headers). No build step runs at the repo root.
 

@@ -1,5 +1,5 @@
 {
-  "name": "@nyv/bench",
+  "name": "@fyv/bench",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -9,9 +9,9 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@nyv/core": "workspace:*",
-    "@nyv/protocol": "workspace:*",
-    "@nyv/providers": "workspace:*"
+    "@fyv/core": "workspace:*",
+    "@fyv/protocol": "workspace:*",
+    "@fyv/providers": "workspace:*"
   },
   "devDependencies": {
     "tsx": "^4.19.0",
