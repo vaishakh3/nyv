@@ -27,15 +27,16 @@ export const clientMessage = z.discriminatedUnion("type", [
   z.object({ type: z.literal("session.start"), config: sessionConfig }),
   z.object({ type: z.literal("session.stop") }),
   /** Client-side VAD saw end of speech; lets the relay flush ASR early. */
-  z.object({ type: z.literal("speech.end"), tsMs: z.number().int().nonnegative() }),
+  z.object({ type: z.literal("speech.end"), tsMs: z.number().nonnegative() }),
   /** Client reports when a segment started playing. playbackStartTsMs is already converted to the relay clock using the ping/pong offset. */
   z.object({
     type: z.literal("trace.playback"),
     segmentId: z.number().int().positive(),
-    playbackStartTsMs: z.number().int().nonnegative(),
+    playbackStartTsMs: z.number().nonnegative(),
     backlogMs: z.number().nonnegative(),
   }),
-  z.object({ type: z.literal("ping"), tsMs: z.number().int().nonnegative() }),
+  /** tsMs is the client's performance.now(): fractional. */
+  z.object({ type: z.literal("ping"), tsMs: z.number().nonnegative() }),
 ]);
 export type ClientMessage = z.infer<typeof clientMessage>;
 
@@ -46,6 +47,8 @@ export const hopTimings = z.object({
   speechStart: z.number().optional(),
   speechEnd: z.number().optional(),
   asrFinal: z.number().optional(),
+  /** When the MT request was sent; earlier than asrFinal when translated speculatively from partials. */
+  mtStart: z.number().optional(),
   mtFirstToken: z.number().optional(),
   mtDone: z.number().optional(),
   ttsFirstByte: z.number().optional(),
@@ -90,6 +93,9 @@ export const serverMessage = z.discriminatedUnion("type", [
       "bad_frame",
       "already_started",
       "capacity",
+      "too_many_sessions",
+      "session_expired",
+      "idle",
       "provider_failed",
       "unsupported_language",
       "internal",
@@ -99,7 +105,7 @@ export const serverMessage = z.discriminatedUnion("type", [
   }),
   z.object({
     type: z.literal("pong"),
-    tsMs: z.number().int().nonnegative(),
+    tsMs: z.number().nonnegative(),
     serverTsMs: z.number(),
   }),
 ]);

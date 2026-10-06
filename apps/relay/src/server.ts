@@ -11,18 +11,41 @@ import {
   type ServerMessage,
 } from "@nyv/protocol";
 import { type WebSocket, WebSocketServer } from "ws";
+import { Metrics } from "./metrics.js";
 
 export interface RelayOptions {
   providers: () => Providers;
   log?: (msg: string, data?: Record<string, unknown>) => void;
   /** Max concurrent sessions; protects provider quotas during the beta. */
   maxSessions?: number;
+  /** Max concurrent sessions from one client IP (0 = unlimited). */
+  maxSessionsPerIp?: number;
+  /** Hard cap on a session's lifetime (0 = unlimited). */
+  maxSessionMs?: number;
+  /** Stop a session that has received no audio for this long (0 = never). */
+  idleMs?: number;
+  /** Return false to refuse the upgrade with 401 (token / origin checks live in main.ts). */
+  authorize?: (req: IncomingMessage) => boolean;
+  /** Use X-Forwarded-For for the client IP (behind a trusted proxy / load balancer). */
+  trustProxy?: boolean;
+}
+
+export function clientIp(req: IncomingMessage, trustProxy: boolean): string {
+  if (trustProxy) {
+    const xff = req.headers["x-forwarded-for"];
+    const first = (Array.isArray(xff) ? xff[0] : xff)?.split(",")[0]?.trim();
+    if (first) return first;
+  }
+  return req.socket.remoteAddress ?? "unknown";
 }
 
 /** One WebSocket = one translation session. JSON text frames are control, binary frames are PCM16. */
 export class RelayServer {
   readonly wss: WebSocketServer;
+  readonly metrics = new Metrics();
   private readonly sessions = new Map<WebSocket, TranslationSession>();
+  private readonly perIp = new Map<string, number>();
+  private readonly ipOf = new Map<WebSocket, string>();
   private readonly log: NonNullable<RelayOptions["log"]>;
 
   constructor(private readonly opts: RelayOptions) {
@@ -32,6 +55,13 @@ export class RelayServer {
   }
 
   handleUpgrade(req: IncomingMessage, socket: import("node:stream").Duplex, head: Buffer): void {
+    if (this.opts.authorize && !this.opts.authorize(req)) {
+      this.metrics.reject("unauthorized");
+      this.log("ws.unauthorized", { ip: clientIp(req, this.opts.trustProxy ?? false) });
+      socket.write("HTTP/1.1 401 Unauthorized\r\nConnection: close\r\n\r\n");
+      socket.destroy();
+      return;
+    }
     this.wss.handleUpgrade(req, socket, head, (ws) => this.wss.emit("connection", ws, req));
   }
 
@@ -46,10 +76,23 @@ export class RelayServer {
 
   private onConnection(ws: WebSocket, req: IncomingMessage): void {
     const connId = randomUUID().slice(0, 8);
-    this.log("ws.open", { connId, ip: req.socket.remoteAddress });
+    const ip = clientIp(req, this.opts.trustProxy ?? false);
+    this.log("ws.open", { connId, ip });
     let seq = 0;
+    let lastAudioAt = Date.now();
+    const observed = new Set<number>();
+    const timers: ReturnType<typeof setTimeout>[] = [];
     const send = (m: ServerMessage) => {
+      if (m.type === "trace" && m.hops.playbackStart !== undefined && !observed.has(m.segmentId)) {
+        observed.add(m.segmentId);
+        this.metrics.observe(m.hops);
+      }
+      if (m.type === "error") this.metrics.errorsTotal++;
       if (ws.readyState === ws.OPEN) ws.send(JSON.stringify(m));
+    };
+    const endWith = (code: "session_expired" | "idle", message: string) => {
+      send({ type: "error", code, message, fatal: true });
+      void this.stopSession(ws, code).then(() => ws.close(1000, code));
     };
 
     ws.on("message", (data: Buffer | ArrayBuffer | Buffer[], isBinary: boolean) => {
@@ -58,7 +101,10 @@ export class RelayServer {
         if (!session) return;
         try {
           const frame = decodeFrame(toUint8(data));
-          if (frame.kind === FrameKind.CaptureAudio) session.pushAudio(frame.pcm);
+          if (frame.kind === FrameKind.CaptureAudio) {
+            lastAudioAt = Date.now();
+            session.pushAudio(frame.pcm);
+          }
         } catch (err) {
           send({ type: "error", code: "bad_frame", message: String(err), fatal: false });
         }
@@ -90,6 +136,19 @@ export class RelayServer {
               fatal: true,
             });
             ws.close(1013, "capacity");
+            this.metrics.reject("capacity");
+            return;
+          }
+          const perIp = this.opts.maxSessionsPerIp ?? 0;
+          if (perIp > 0 && (this.perIp.get(ip) ?? 0) >= perIp) {
+            send({
+              type: "error",
+              code: "too_many_sessions",
+              message: `at most ${perIp} concurrent sessions per client`,
+              fatal: true,
+            });
+            ws.close(1008, "too_many_sessions");
+            this.metrics.reject("per_ip");
             return;
           }
           const s = new TranslationSession(
@@ -112,10 +171,31 @@ export class RelayServer {
             },
           );
           this.sessions.set(ws, s);
-          this.log("session.start", { connId, ...msg.config });
+          this.ipOf.set(ws, ip);
+          this.perIp.set(ip, (this.perIp.get(ip) ?? 0) + 1);
+          this.metrics.sessionsActive++;
+          this.metrics.sessionsTotal++;
+          this.log("session.start", { connId, ip, ...msg.config });
+          if (this.opts.maxSessionMs)
+            timers.push(
+              setTimeout(
+                () => endWith("session_expired", "maximum session length reached"),
+                this.opts.maxSessionMs,
+              ),
+            );
+          if (this.opts.idleMs) {
+            const idle = this.opts.idleMs;
+            const t = setInterval(
+              () => {
+                if (Date.now() - lastAudioAt > idle) endWith("idle", "no audio received; stopping");
+              },
+              Math.min(idle, 30_000),
+            );
+            timers.push(t as unknown as ReturnType<typeof setTimeout>);
+          }
           s.start().catch((err) => {
             this.log("session.start.failed", { connId, err: String(err) });
-            this.sessions.delete(ws);
+            void this.stopSession(ws, "start_failed");
           });
           return;
         }
@@ -126,7 +206,7 @@ export class RelayServer {
           session?.speechEnded();
           return;
         case "trace.playback":
-          session?.reportPlayback(msg.segmentId, msg.playbackStartTsMs);
+          session?.reportPlayback(msg.segmentId, msg.playbackStartTsMs, msg.backlogMs);
           return;
         case "ping":
           send({
@@ -139,6 +219,7 @@ export class RelayServer {
     });
     ws.on("close", () => {
       this.log("ws.close", { connId });
+      for (const t of timers) clearTimeout(t);
       void this.stopSession(ws, "disconnect");
     });
     ws.on("error", (err) => this.log("ws.error", { connId, err: String(err) }));
@@ -148,8 +229,26 @@ export class RelayServer {
     const s = this.sessions.get(ws);
     if (!s) return;
     this.sessions.delete(ws);
+    const ip = this.ipOf.get(ws);
+    if (ip !== undefined) {
+      const n = (this.perIp.get(ip) ?? 1) - 1;
+      if (n <= 0) this.perIp.delete(ip);
+      else this.perIp.set(ip, n);
+      this.ipOf.delete(ws);
+    }
+    this.metrics.sessionsActive--;
     await s.stop(reason);
-    this.log("session.stop", { reason, traces: s.tracer.all().length });
+    const traces = s.tracer.all();
+    const e2e = traces
+      .map(({ hops: h }) => (h.playbackStart ?? Number.NaN) - (h.speechEnd ?? Number.NaN))
+      .filter((v) => Number.isFinite(v))
+      .sort((a, b) => a - b);
+    this.log("session.stop", {
+      sessionId: s.id,
+      reason,
+      segments: traces.length,
+      ...(e2e.length ? { p50Ms: Math.round(e2e[Math.floor(e2e.length / 2)] as number) } : {}),
+    });
   }
 }
 

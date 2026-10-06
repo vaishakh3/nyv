@@ -38,6 +38,96 @@ describe("Segmenter", () => {
     });
   });
 
+  it("never re-emits words already shipped when the vendor re-sends the whole chunk", () => {
+    const { seg, segments } = setup();
+    // Two agreeing partials commit "Hi everyone." → closes on the period, mid-chunk.
+    seg.handle({ type: "partial", text: "", words: wordsFromText("Hi everyone.", 0) });
+    seg.handle({ type: "partial", text: "", words: wordsFromText("Hi everyone.", 0) });
+    expect(segments.map((s) => s.text)).toEqual(["Hi everyone."]);
+    // Deepgram keeps sending the full chunk in later partials and in the final.
+    seg.handle({ type: "partial", text: "", words: wordsFromText("Hi everyone. Thanks for", 0) });
+    seg.handle({
+      type: "partial",
+      text: "",
+      words: wordsFromText("Hi everyone. Thanks for joining", 0),
+    });
+    expect(segments).toHaveLength(1);
+    seg.handle({
+      type: "final",
+      text: "",
+      words: wordsFromText("Hi everyone. Thanks for joining today.", 0),
+      speechFinal: true,
+    });
+    expect(segments.map((s) => s.text)).toEqual(["Hi everyone.", "Thanks for joining today."]);
+    expect(segments[1]).toMatchObject({ speechStartMs: 600, speechEndMs: 1800 });
+  });
+
+  it("drops a re-sent last word even when the vendor re-times it past the shipped boundary", () => {
+    const { seg, segments } = setup();
+    const first = [
+      { word: "Hi,", startMs: 0, endMs: 80 },
+      { word: "everyone.", startMs: 80, endMs: 400 },
+    ];
+    seg.handle({ type: "partial", text: "", words: first });
+    seg.handle({ type: "partial", text: "", words: first });
+    expect(segments.map((s) => s.text)).toEqual(["Hi, everyone."]);
+    // Next update: "everyone." now starts after the shipped boundary (400) — still the same word.
+    const next = [
+      { word: "Hi,", startMs: 0, endMs: 300 },
+      { word: "everyone.", startMs: 420, endMs: 700 },
+      ...wordsFromText("Thanks for joining today.", 800),
+    ];
+    seg.handle({ type: "partial", text: "", words: next });
+    seg.handle({ type: "partial", text: "", words: next });
+    expect(segments.map((s) => s.text)).toEqual(["Hi, everyone.", "Thanks for joining today."]);
+  });
+
+  it("ships the unstable tail only when told the stream has ended", () => {
+    const { seg, segments } = setup();
+    seg.handle({ type: "partial", text: "", words: wordsFromText("Let's move on to the", 0) });
+    seg.handle({
+      type: "partial",
+      text: "",
+      words: wordsFromText("Let's move on to the next quarter.", 0),
+    });
+    seg.flush();
+    expect(segments.map((s) => s.text)).toEqual(["Let's move on to the"]);
+    seg.handle({
+      type: "partial",
+      text: "",
+      words: wordsFromText("Let's move on to the next quarter.", 0),
+    });
+    seg.handle({ type: "closed" });
+    expect(segments.map((s) => s.text)).toEqual(["Let's move on to the", "next quarter."]);
+  });
+
+  it("drops a re-sent last word whose interim timing was truncated", () => {
+    const { seg, segments } = setup();
+    // Interim: "today." is still being spoken, so its end time is early.
+    const interim = [
+      ...wordsFromText("Thanks for joining", 0),
+      { word: "today.", startMs: 900, endMs: 1000 },
+    ];
+    seg.handle({ type: "partial", text: "", words: interim });
+    seg.handle({ type: "partial", text: "", words: interim });
+    expect(segments.map((s) => s.text)).toEqual(["Thanks for joining today."]);
+    // Final: the same word now spans 900–1400 and is followed by new words.
+    seg.handle({
+      type: "final",
+      text: "",
+      words: [
+        ...wordsFromText("Thanks for joining", 0),
+        { word: "today.", startMs: 900, endMs: 1400 },
+        ...wordsFromText("Let's get started.", 1500),
+      ],
+      speechFinal: true,
+    });
+    expect(segments.map((s) => s.text)).toEqual([
+      "Thanks for joining today.",
+      "Let's get started.",
+    ]);
+  });
+
   it("does not translate unstable words on flush", () => {
     const { seg, segments } = setup();
     seg.handle({ type: "partial", text: "", words: wordsFromText("maybe", 0) });

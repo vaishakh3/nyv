@@ -9,7 +9,16 @@ export default defineConfig({
     description: "Hear Google Meet participants in your language, in real time.",
     permissions: ["tabCapture", "offscreen", "storage", "activeTab"],
     host_permissions: ["https://meet.google.com/*"],
-    action: { default_title: "nyv" },
+    icons: {
+      16: "icons/icon-16.png",
+      32: "icons/icon-32.png",
+      48: "icons/icon-48.png",
+      128: "icons/icon-128.png",
+    },
+    action: {
+      default_title: "nyv",
+      default_icon: { 16: "icons/icon-16.png", 32: "icons/icon-32.png" },
+    },
     minimum_chrome_version: "116",
   },
   vite: () => ({ plugins: [preact()] }),

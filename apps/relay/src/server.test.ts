@@ -10,6 +10,7 @@ import {
 import { MockAsrProvider, MockMtProvider, MockTtsProvider } from "@nyv/providers";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import WebSocket from "ws";
+import { Metrics } from "./metrics.js";
 import { RelayServer } from "./server.js";
 
 let url = "";
@@ -108,5 +109,117 @@ describe("RelayServer", () => {
     expect(await first).toMatchObject({ type: "error", code: "bad_message", fatal: false });
     expect(ws.readyState).toBe(WebSocket.OPEN);
     ws.close();
+  });
+});
+
+function mockProviders() {
+  return {
+    asr: new MockAsrProvider({ script: [], latencyMs: 5 }),
+    mt: new MockMtProvider({ firstTokenMs: 5, msPerToken: 1 }),
+    tts: new MockTtsProvider({ firstByteMs: 5, msPerChar: 2, chunkMs: 20, sampleRate: 8000 }),
+  };
+}
+
+async function listen(relay: RelayServer) {
+  const server = createServer();
+  server.on("upgrade", (req, socket, head) => relay.handleUpgrade(req, socket, head));
+  await new Promise<void>((r) => server.listen(0, r));
+  return {
+    url: `ws://127.0.0.1:${(server.address() as AddressInfo).port}/v1/session`,
+    close: async () => {
+      await relay.close();
+      server.close();
+    },
+  };
+}
+
+const startMsg = JSON.stringify({
+  type: "session.start",
+  config: { sourceLang: "en", targetLang: "hi", direction: "inbound", inputSampleRate: 16000 },
+});
+
+function firstMessage(ws: WebSocket): Promise<ServerMessage> {
+  return new Promise((resolve) =>
+    ws.once("message", (d: ArrayBuffer | string) => resolve(parseServerMessage(d.toString()))),
+  );
+}
+
+describe("RelayServer hardening", () => {
+  it("refuses the upgrade with 401 when authorize() says no", async () => {
+    const r = new RelayServer({
+      providers: mockProviders,
+      authorize: (req) =>
+        new URL(req.url ?? "/", "http://x").searchParams.get("token") === "s3cret",
+    });
+    const { url, close } = await listen(r);
+    const denied = new WebSocket(url);
+    const err = await new Promise<Error>((resolve) => denied.once("error", resolve));
+    expect(err.message).toMatch(/401/);
+    expect(r.metrics.rejected.get("unauthorized")).toBe(1);
+
+    const ok = new WebSocket(`${url}?token=s3cret`);
+    await new Promise<void>((resolve) => ok.once("open", () => resolve()));
+    ok.send(startMsg);
+    const first = await firstMessage(ok);
+    expect(first.type).toBe("session.ready");
+    ok.close();
+    await close();
+  });
+
+  it("caps concurrent sessions per client IP", async () => {
+    const r = new RelayServer({ providers: mockProviders, maxSessionsPerIp: 1 });
+    const { url, close } = await listen(r);
+    const a = new WebSocket(url);
+    await new Promise<void>((resolve) => a.once("open", () => resolve()));
+    a.send(startMsg);
+    expect((await firstMessage(a)).type).toBe("session.ready");
+
+    const b = new WebSocket(url);
+    await new Promise<void>((resolve) => b.once("open", () => resolve()));
+    b.send(startMsg);
+    const m = await firstMessage(b);
+    expect(m.type === "error" && m.code).toBe("too_many_sessions");
+    expect(r.metrics.sessionsActive).toBe(1);
+
+    a.close();
+    await new Promise((res) => setTimeout(res, 50));
+    expect(r.metrics.sessionsActive).toBe(0);
+    const c = new WebSocket(url);
+    await new Promise<void>((resolve) => c.once("open", () => resolve()));
+    c.send(startMsg);
+    expect((await firstMessage(c)).type).toBe("session.ready");
+    c.close();
+    await close();
+  });
+
+  it("ends a session that exceeds its maximum length", async () => {
+    const r = new RelayServer({ providers: mockProviders, maxSessionMs: 50 });
+    const { url, close } = await listen(r);
+    const ws = new WebSocket(url);
+    await new Promise<void>((resolve) => ws.once("open", () => resolve()));
+    ws.send(startMsg);
+    const codes: string[] = [];
+    const closed = new Promise<number>((resolve) => ws.once("close", resolve));
+    ws.on("message", (d: ArrayBuffer | string) => {
+      const m = parseServerMessage(d.toString());
+      if (m.type === "error") codes.push(m.code);
+    });
+    expect(await closed).toBe(1000);
+    expect(codes).toContain("session_expired");
+    await close();
+  });
+});
+
+describe("Metrics", () => {
+  it("renders counters and latency quantiles in Prometheus text format", () => {
+    const m = new Metrics();
+    m.sessionsTotal = 2;
+    m.reject("unauthorized");
+    for (const v of [900, 1000, 1100, 2000]) m.observe({ speechEnd: 0, playbackStart: v });
+    const text = m.render();
+    expect(text).toContain("nyv_sessions_total 2");
+    expect(text).toContain('nyv_rejected_total{reason="unauthorized"} 1');
+    expect(text).toContain('nyv_perceived_latency_ms{quantile="0.5"} 1100');
+    expect(text).toContain("nyv_perceived_latency_ms_count 4");
   });
 });

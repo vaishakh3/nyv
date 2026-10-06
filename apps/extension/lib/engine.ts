@@ -8,7 +8,7 @@ import {
 } from "@nyv/audio";
 import type { AudioFrame, ServerMessage } from "@nyv/protocol";
 import { type Caption, IDLE_STATUS, type Settings, type Status } from "./messages.js";
-import { RelayClient } from "./relay-client.js";
+import { RelayClient, relayUrlWithToken } from "./relay-client.js";
 
 export interface EngineEvents {
   onStatus(status: Status): void;
@@ -29,14 +29,23 @@ export class Engine {
   private outResampler: Resampler | undefined;
   private status: Status = { ...IDLE_STATUS };
   private readonly captions = new Map<number, Caption>();
+  /** Last Hindi line shown; stays on screen under the next segment's live English until that one is translated. */
+  private lastTarget: { text: string; final: boolean; at: number } | undefined;
   private latencies: number[] = [];
+  /** Segments already counted toward the latency readout (the relay re-sends trace on each hop). */
+  private readonly traced = new Set<number>();
   private duckTimer: ReturnType<typeof setInterval> | undefined;
   private statusTimer: ReturnType<typeof setTimeout> | undefined;
+  private settings: Settings | undefined;
+  /** Bumped on stop/start so a stale socket's close event cannot trigger a reconnect. */
+  private epoch = 0;
 
   constructor(private readonly events: EngineEvents) {}
 
   async start(streamId: string, settings: Settings): Promise<void> {
     await this.stop();
+    this.settings = settings;
+    const epoch = ++this.epoch;
     this.setStatus({ ...IDLE_STATUS, state: "connecting" });
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -70,23 +79,7 @@ export class Engine {
       this.playback.port.onmessage = (e: MessageEvent<PlaybackWorkletMessage>) =>
         this.onPlayback(e.data);
 
-      this.relay = new RelayClient(settings.relayUrl, {
-        onMessage: (m) => this.onRelayMessage(m),
-        onAudio: (f) => this.onRelayAudio(f),
-        onClose: (reason) => {
-          if (this.status.state === "active" || this.status.state === "connecting") {
-            this.setStatus({
-              ...this.status,
-              state: "error",
-              error: `relay disconnected: ${reason}`,
-            });
-          }
-        },
-      });
-      await this.relay.connect({
-        sourceLang: settings.sourceLang,
-        targetLang: settings.targetLang,
-      });
+      await this.openRelay(epoch);
       this.duckTimer = setInterval(() => this.applyDucking(), 50);
     } catch (err) {
       await this.stop();
@@ -99,7 +92,70 @@ export class Engine {
     }
   }
 
+  /** Opens the relay socket and starts a server session; capture and playback nodes are untouched. */
+  private async openRelay(epoch: number): Promise<void> {
+    const settings = this.settings;
+    if (!settings) throw new Error("engine not started");
+    const relay = new RelayClient(relayUrlWithToken(settings.relayUrl, settings.relayToken), {
+      onMessage: (m) => {
+        if (this.relay === relay) this.onRelayMessage(m);
+      },
+      onAudio: (f) => {
+        if (this.relay === relay) this.onRelayAudio(f);
+      },
+      onClose: (reason) => {
+        if (this.relay !== relay || epoch !== this.epoch) return;
+        if (this.status.state === "active" || this.status.state === "connecting")
+          void this.reconnect(epoch, reason);
+      },
+    });
+    this.relay = relay;
+    await relay.connect({ sourceLang: settings.sourceLang, targetLang: settings.targetLang });
+  }
+
+  /**
+   * The relay link dropped mid-call. Capture keeps running and queued audio keeps playing; we re-open
+   * the socket with backoff (~10 s budget). The server session is new, so segment ids restart at 1.
+   */
+  private async reconnect(epoch: number, reason: string): Promise<void> {
+    this.relay = undefined;
+    this.setStatus({ ...this.status, state: "reconnecting", error: `relay: ${reason}` });
+    for (const delayMs of [300, 1000, 2500, 5000]) {
+      await new Promise((r) => setTimeout(r, delayMs));
+      if (epoch !== this.epoch) return;
+      try {
+        this.captions.clear();
+        this.traced.clear();
+        await this.openRelay(epoch);
+        return;
+      } catch (err) {
+        console.warn("[nyv] reconnect failed:", err instanceof Error ? err.message : err);
+      }
+    }
+    if (epoch !== this.epoch) return;
+    await this.fail(`relay disconnected: ${reason}`);
+  }
+
+  /** Give up on this call: release the tab capture (so Start works again) and show why. */
+  private async fail(error: string): Promise<void> {
+    const keep = this.status;
+    await this.teardown();
+    this.setStatus({
+      ...IDLE_STATUS,
+      state: "error",
+      error,
+      ...(keep.latency ? { latency: keep.latency } : {}),
+    });
+  }
+
   async stop(): Promise<void> {
+    await this.teardown();
+    if (this.status.state !== "idle") this.setStatus({ ...IDLE_STATUS });
+  }
+
+  private async teardown(): Promise<void> {
+    this.epoch++;
+    this.settings = undefined;
     if (this.duckTimer) clearInterval(this.duckTimer);
     this.duckTimer = undefined;
     this.relay?.close();
@@ -110,13 +166,14 @@ export class Engine {
     this.duckGain = undefined;
     this.outResampler = undefined;
     this.captions.clear();
+    this.lastTarget = undefined;
     this.latencies = [];
+    this.traced.clear();
     if (this.ctx) {
       const ctx = this.ctx;
       this.ctx = undefined;
       await ctx.close().catch(() => {});
     }
-    if (this.status.state !== "idle") this.setStatus({ ...IDLE_STATUS });
   }
 
   getStatus(): Status {
@@ -150,7 +207,7 @@ export class Engine {
         };
         c.source = m.text;
         this.captions.set(m.segmentId, c);
-        this.events.onCaption({ ...c });
+        this.publishCaption(c);
         break;
       }
       case "translation": {
@@ -163,12 +220,17 @@ export class Engine {
         c.target = m.text;
         c.final = m.final;
         this.captions.set(m.segmentId, c);
-        this.events.onCaption({ ...c });
+        this.publishCaption(c);
         if (m.final) this.captions.delete(m.segmentId);
         break;
       }
       case "trace":
-        if (m.hops.playbackStart !== undefined && m.hops.speechEnd !== undefined) {
+        if (
+          m.hops.playbackStart !== undefined &&
+          m.hops.speechEnd !== undefined &&
+          !this.traced.has(m.segmentId)
+        ) {
+          this.traced.add(m.segmentId);
           const e2e = m.hops.playbackStart - m.hops.speechEnd;
           this.latencies.push(e2e);
           if (this.latencies.length > 50) this.latencies.shift();
@@ -178,14 +240,31 @@ export class Engine {
         }
         break;
       case "error":
-        if (m.fatal) this.setStatus({ ...this.status, state: "error", error: m.message });
+        if (m.fatal) void this.fail(m.message);
+        else console.warn("[nyv] relay:", m.code, m.message);
         break;
       case "session.stopped":
+        // The server ended the session (limits, idle, shutdown); a dropped socket goes through reconnect instead.
         if (this.status.state === "active") void this.stop();
         break;
       default:
         break;
     }
+  }
+
+  /**
+   * With a fast ASR the next segment's English partials arrive while the previous Hindi is still being
+   * spoken; keep that Hindi on screen (for up to 6 s) instead of blanking the target line.
+   */
+  private publishCaption(c: Caption): void {
+    const now = performance.now();
+    if (c.target) {
+      this.lastTarget = { text: c.target, final: c.final, at: now };
+      this.events.onCaption({ ...c });
+      return;
+    }
+    const held = this.lastTarget && now - this.lastTarget.at < 6000 ? this.lastTarget : undefined;
+    this.events.onCaption(held ? { ...c, target: held.text, final: held.final } : { ...c });
   }
 
   private onRelayAudio(f: AudioFrame): void {

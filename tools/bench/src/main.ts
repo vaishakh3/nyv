@@ -11,6 +11,7 @@ const { values } = parseArgs({
     source: { type: "string", default: "en" },
     target: { type: "string", default: "hi" },
     wav: { type: "string" },
+    speculation: { type: "boolean", default: false },
     runs: { type: "string", default: "1" },
     speed: { type: "string", default: "1" },
     out: { type: "string" },
@@ -42,6 +43,7 @@ for (let i = 0; i < runs; i++) {
     ...(audio ? { audio } : {}),
     durationMs,
     speed,
+    speculative: values.speculation,
     onLog: (l) => console.error(l),
   });
   all.push(res.report);
@@ -57,6 +59,9 @@ for (let i = 0; i < runs; i++) {
       console.log(`  #${s.segmentId} ${e2e.padStart(7)}  ${s.source}  →  ${s.target}`);
     }
     console.log(formatReport(res.report));
+    console.log(
+      `speculative MT: ${res.speculation.hits} adopted / ${res.speculation.misses} discarded`,
+    );
   }
 }
 
