@@ -64,10 +64,16 @@ export class Engine {
         ctx.audioWorklet.addModule(chrome.runtime.getURL("/worklets/playback.worklet.js")),
       ]);
 
+      // Everything the listener hears goes through a soft limiter: transparent below 0.8, then a
+      // tanh knee, so a translation starting on top of the not-yet-ducked original can't clip.
+      const limiter = ctx.createWaveShaper();
+      limiter.curve = softKneeCurve(0.8);
+      limiter.connect(ctx.destination);
+
       const source = ctx.createMediaStreamSource(stream);
       this.duckGain = ctx.createGain();
       this.duckGain.gain.value = settings.originalAudio === "duck" ? 1 : 0;
-      source.connect(this.duckGain).connect(ctx.destination);
+      source.connect(this.duckGain).connect(limiter);
 
       const capture = new AudioWorkletNode(ctx, "fyv-capture", { numberOfOutputs: 0 });
       source.connect(capture);
@@ -77,10 +83,9 @@ export class Engine {
         numberOfInputs: 0,
         outputChannelCount: [1],
       });
-      // Headroom so a full-scale TTS peak plus the "Quiet" original (0.12) never clips the mix.
       const playbackGain = ctx.createGain();
       playbackGain.gain.value = 0.85;
-      this.playback.connect(playbackGain).connect(ctx.destination);
+      this.playback.connect(playbackGain).connect(limiter);
       this.playback.port.onmessage = (e: MessageEvent<PlaybackWorkletMessage>) =>
         this.onPlayback(e.data);
 
@@ -338,4 +343,17 @@ export class Engine {
       this.events.onStatus(this.status);
     }, 200);
   }
+}
+
+/** Identity up to ±knee, then tanh-compresses the remaining headroom so the output never exceeds ±1. */
+function softKneeCurve(knee: number, points = 4096): Float32Array<ArrayBuffer> {
+  const curve = new Float32Array(points);
+  const room = 1 - knee;
+  for (let i = 0; i < points; i++) {
+    const x = (i / (points - 1)) * 2 - 1;
+    const a = Math.abs(x);
+    const y = a <= knee ? a : knee + room * Math.tanh((a - knee) / room);
+    curve[i] = Math.sign(x) * y;
+  }
+  return curve;
 }
