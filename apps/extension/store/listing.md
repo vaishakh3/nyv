@@ -32,7 +32,7 @@ How it works
 • A latency readout shows exactly how far behind the speaker you are (typically 0.7–1.0 s).
 
 Languages
-English → Hindi at launch. More pairs are being added — see fyv.si for the current list.
+English → Hindi and English → Malayalam at launch. More pairs are being added — see fyv.si for the current list.
 
 Access
 fyv is in beta. You need an access code from fyv.si to start; each code has a daily minute budget. Self-hosting is also supported: the relay is open source (MIT) and the advanced settings let you point the extension at your own server with your own vendor keys.

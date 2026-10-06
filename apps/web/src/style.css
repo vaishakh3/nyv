@@ -10,6 +10,7 @@
   --sans: "Inter Variable", Inter, system-ui, -apple-system, sans-serif;
   --serif: "Instrument Serif", Georgia, "Times New Roman", serif;
   --deva: "Noto Serif Devanagari", "Noto Sans Devanagari Variable", system-ui, sans-serif;
+  --mlym: "Noto Serif Malayalam", system-ui, sans-serif;
   --max: 1120px;
   --gutter: clamp(20px, 4vw, 48px);
 }
@@ -60,6 +61,9 @@ ul {
 }
 [lang="hi"] {
   font-family: var(--deva);
+}
+[lang="ml"] {
+  font-family: var(--mlym);
 }
 .skip {
   position: absolute;
@@ -678,6 +682,10 @@ h1 em {
 }
 .lang-list b[lang="hi"] {
   font-family: var(--deva);
+  font-weight: 500;
+}
+.lang-list b[lang="ml"] {
+  font-family: var(--mlym);
   font-weight: 500;
 }
 .lang-list span {

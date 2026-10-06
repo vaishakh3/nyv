@@ -1,7 +1,7 @@
 # fyv
 
 Real-time speech-to-speech translation for video calls. One participant speaks English; the other hears
-Hindi (or Spanish, French, German, Japanese, Portuguese) about a second and a half later, with bilingual captions.
+Hindi or Malayalam (or Spanish, French, German, Japanese, Portuguese) under a second later, with bilingual captions.
 
 **Status: v0.3 — runs end-to-end on real vendors (Deepgram Flux → Groq → ElevenLabs) at ~0.9 s p50 phrase-end → translated audio, and survives vendor/relay socket drops mid-call.**
 
@@ -84,6 +84,18 @@ behind a WS + TLS handshake (`ELEVENLABS_PREWARM=0` to disable), and one warm HT
 Flux trade-offs we accepted: it is English-only (other source languages route to Nova-3 automatically), has no
 `smart_format` ("12%" is spoken as "twelve percent" — the translation is identical), and we observed one
 misheard name on the clip ("Priya" → "Pre"), which Nova-3 got right.
+
+**Malayalam** (EN → ML) rides the same English ASR path and lands at **0.81 s p50 / ~2 s p95** on the same clip
+(Hindi: 0.83–0.89 s the same day). Two things are routed per target language, so the Hindi path is untouched:
+ElevenLabs Flash v2.5 rejects `ml`, so Malayalam (and any language in `ELEVENLABS_DIALOGUE_LANGS`) goes to
+`eleven_v4_turbo` over the Text-to-Dialogue WebSocket — ~160 ms first byte warm, and it reads "12", "4:30",
+"2.5" as natural Malayalam number words; and the interpreter prompt carries three Malayalam examples plus
+"numbers as digits", because every model we tried (gpt-oss-20b/120b, qwen3, gpt-4o-mini, gpt-4.1-mini) otherwise
+wrote "almost" in Urdu, Hebrew, Portuguese or Korean mid-sentence and misread spelled-out numbers. As a last
+line, `ScriptGuardMtProvider` strips wrong-script characters from the token stream before they reach the voice
+(gpt-oss-20b once degenerated into hundreds of Korean tokens). `GROQ_MODEL_ML` can point Malayalam at a
+different Groq model; gpt-oss-120b writes slightly better prose but showed 1.6–2.9 s first-token spikes on the
+free tier, and qwen3.8-27b is 65 ms to first token yet hallucinates weekdays, so the default stays gpt-oss-20b.
 
 **Backlog control** has two layers. When the listener's queued Hindi exceeds ~1.2 s the relay asks the voice
 to speak faster (linearly up to 1.15× at 4 s behind — a brisk speaker, still natural); the client's

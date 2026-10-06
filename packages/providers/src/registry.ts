@@ -2,10 +2,14 @@ import type { AsrProvider, MtProvider, Providers, TtsProvider } from "@fyv/core"
 import { DeepgramAsrProvider } from "./deepgram.js";
 import { DeepgramFluxAsrProvider } from "./deepgram-flux.js";
 import { ElevenLabsTtsProvider } from "./elevenlabs.js";
+import { ElevenLabsDialogueTtsProvider } from "./elevenlabs-dialogue.js";
 import { MockAsrProvider, MockMtProvider, MockTtsProvider } from "./mock.js";
 import { OpenAiMtProvider } from "./openai-mt.js";
 import { ResilientMtProvider } from "./resilient-mt.js";
 import { RoutedAsrProvider } from "./routed-asr.js";
+import { RoutedMtProvider } from "./routed-mt.js";
+import { RoutedTtsProvider } from "./routed-tts.js";
+import { ScriptGuardMtProvider } from "./script-guard-mt.js";
 
 export interface ProviderEnv {
   ASR_PROVIDER?: string;
@@ -24,11 +28,27 @@ export interface ProviderEnv {
   OPENAI_BASE_URL?: string;
   GROQ_API_KEY?: string;
   GROQ_MODEL?: string;
+  /**
+   * Optional Groq model for Malayalam targets only (e.g. openai/gpt-oss-120b: better prose, but
+   * 1.6–2.9 s first-token spikes on the free tier in our runs). Unset/"" keeps GROQ_MODEL.
+   */
+  GROQ_MODEL_ML?: string;
   ELEVENLABS_API_KEY?: string;
   ELEVENLABS_PREWARM?: string;
   ELEVENLABS_MODEL?: string;
   ELEVENLABS_VOICE_ID?: string;
+  /** Comma-separated target languages served by the Text-to-Dialogue endpoint (v3/v4 models); default "ml". */
+  ELEVENLABS_DIALOGUE_LANGS?: string;
+  ELEVENLABS_DIALOGUE_MODEL?: string;
 }
+
+const csv = (s: string | undefined, fallback: string): Set<string> =>
+  new Set(
+    (s ?? fallback)
+      .split(",")
+      .map((x) => x.trim())
+      .filter(Boolean),
+  );
 
 /** Builds the provider set from environment-style config. Unknown names fail loudly; "mock" always works. */
 export function providersFromEnv(env: ProviderEnv): Providers {
@@ -78,11 +98,40 @@ function deepgramFlux(env: ProviderEnv): DeepgramFluxAsrProvider {
 }
 
 export function mtFromEnv(env: ProviderEnv): MtProvider {
-  const primary = mtByName(env, env.MT_PROVIDER ?? "mock");
+  const mt = routedMtFromEnv(env);
+  return mt.name.startsWith("mock") ? mt : new ScriptGuardMtProvider(mt);
+}
+
+function routedMtFromEnv(env: ProviderEnv): MtProvider {
+  const name = env.MT_PROVIDER ?? "mock";
+  const primary = resilient(env, mtByName(env, name));
+  if (name !== "groq") return primary;
+  const mlModel = env.GROQ_MODEL_ML;
+  if (!mlModel || mlModel === (env.GROQ_MODEL ?? DEFAULT_GROQ_MODEL)) return primary;
+  return new RoutedMtProvider(
+    [{ match: (lang) => lang === "ml", provider: resilient(env, groq(env, mlModel)) }],
+    primary,
+  );
+}
+
+function resilient(env: ProviderEnv, primary: MtProvider): MtProvider {
   if (!env.MT_FALLBACK_PROVIDER || env.MT_FALLBACK_PROVIDER === env.MT_PROVIDER) {
     return primary.name.startsWith("mock") ? primary : new ResilientMtProvider(primary, undefined);
   }
   return new ResilientMtProvider(primary, mtByName(env, env.MT_FALLBACK_PROVIDER));
+}
+
+const DEFAULT_GROQ_MODEL = "openai/gpt-oss-20b";
+
+function groq(env: ProviderEnv, model: string): OpenAiMtProvider {
+  return new OpenAiMtProvider({
+    apiKey: env.GROQ_API_KEY ?? "",
+    baseUrl: "https://api.groq.com/openai/v1",
+    model,
+    label: "groq",
+    // gpt-oss models think before answering unless told not to; translation needs no reasoning.
+    ...(model.includes("gpt-oss") ? { extraBody: { reasoning_effort: "low" } } : {}),
+  });
 }
 
 function mtByName(env: ProviderEnv, name: string): MtProvider {
@@ -97,17 +146,8 @@ function mtByName(env: ProviderEnv, name: string): MtProvider {
       if (env.OPENAI_BASE_URL) o.baseUrl = env.OPENAI_BASE_URL;
       return new OpenAiMtProvider(o);
     }
-    case "groq": {
-      const model = env.GROQ_MODEL ?? "openai/gpt-oss-20b";
-      return new OpenAiMtProvider({
-        apiKey: env.GROQ_API_KEY ?? "",
-        baseUrl: "https://api.groq.com/openai/v1",
-        model,
-        label: "groq",
-        // gpt-oss models think before answering unless told not to; translation needs no reasoning.
-        ...(model.includes("gpt-oss") ? { extraBody: { reasoning_effort: "low" } } : {}),
-      });
-    }
+    case "groq":
+      return groq(env, env.GROQ_MODEL ?? DEFAULT_GROQ_MODEL);
     default:
       throw new Error(`unknown MT_PROVIDER ${name}`);
   }
@@ -124,7 +164,26 @@ export function ttsFromEnv(env: ProviderEnv): TtsProvider {
       if (env.ELEVENLABS_MODEL) o.modelId = env.ELEVENLABS_MODEL;
       if (env.ELEVENLABS_VOICE_ID) o.defaultVoice = env.ELEVENLABS_VOICE_ID;
       if (env.ELEVENLABS_PREWARM === "0" || env.ELEVENLABS_PREWARM === "false") o.prewarm = false;
-      return new ElevenLabsTtsProvider(o);
+      const flash = new ElevenLabsTtsProvider(o);
+      // Flash v2.5 rejects languages outside its 32 (Malayalam included); those go to the v4 dialogue endpoint.
+      const dialogueLangs = csv(env.ELEVENLABS_DIALOGUE_LANGS, "ml");
+      if (dialogueLangs.size === 0) return flash;
+      const d: ConstructorParameters<typeof ElevenLabsDialogueTtsProvider>[0] = {
+        apiKey: o.apiKey,
+        sampleRate: flash.outputSampleRate as 24000,
+      };
+      if (env.ELEVENLABS_DIALOGUE_MODEL) d.modelId = env.ELEVENLABS_DIALOGUE_MODEL;
+      if (o.defaultVoice) d.defaultVoice = o.defaultVoice;
+      if (o.prewarm === false) d.prewarm = false;
+      return new RoutedTtsProvider(
+        [
+          {
+            match: (lang) => dialogueLangs.has(lang),
+            provider: new ElevenLabsDialogueTtsProvider(d),
+          },
+        ],
+        flash,
+      );
     }
     default:
       throw new Error(`unknown TTS_PROVIDER ${env.TTS_PROVIDER}`);

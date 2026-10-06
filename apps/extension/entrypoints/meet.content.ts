@@ -61,7 +61,11 @@ export default defineContentScript({
             : s.state === "reconnecting"
               ? "fyv · reconnecting…"
               : "fyv · connecting";
-      if (s.state === "idle") wrap.classList.remove("show");
+      if (s.state === "idle" || s.state === "connecting") {
+        wrap.classList.remove("show");
+        target.textContent = "";
+        source.textContent = "";
+      }
     };
 
     chrome.runtime.onMessage.addListener((m: ContentMessage) => {

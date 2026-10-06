@@ -29,7 +29,11 @@ export function App() {
     send<Status>({ type: "getStatus" }).then((s) => s && setStatus(s));
     const onMsg = (m: { target?: string; type: string; status?: Status; caption?: Caption }) => {
       if (m.target !== "background") return;
-      if (m.type === "status" && m.status) setStatus(m.status);
+      if (m.type === "status" && m.status) {
+        setStatus(m.status);
+        // A new session starts with the previous language's last caption otherwise.
+        if (m.status.state === "connecting") setCaption(undefined);
+      }
       if (m.type === "caption" && m.caption) setCaption(m.caption);
     };
     chrome.runtime.onMessage.addListener(onMsg);

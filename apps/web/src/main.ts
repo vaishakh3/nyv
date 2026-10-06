@@ -2,6 +2,7 @@ import "@fontsource-variable/inter";
 import "@fontsource/instrument-serif";
 import "@fontsource/instrument-serif/400-italic.css";
 import "@fontsource/noto-serif-devanagari/500.css";
+import "@fontsource/noto-serif-malayalam/500.css";
 
 /**
  * Chrome Web Store listing. Empty until the listing is published; every "Get the extension" button
