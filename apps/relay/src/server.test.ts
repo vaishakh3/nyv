@@ -6,8 +6,8 @@ import {
   FrameKind,
   parseServerMessage,
   type ServerMessage,
-} from "@nyv/protocol";
-import { MockAsrProvider, MockMtProvider, MockTtsProvider } from "@nyv/providers";
+} from "@fyv/protocol";
+import { MockAsrProvider, MockMtProvider, MockTtsProvider } from "@fyv/providers";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import WebSocket from "ws";
 import { Metrics } from "./metrics.js";
@@ -218,10 +218,10 @@ describe("Metrics", () => {
     m.reject("unauthorized");
     for (const v of [900, 1000, 1100, 2000]) m.observe({ speechEnd: 0, playbackStart: v });
     const text = m.render();
-    expect(text).toContain("nyv_sessions_total 2");
-    expect(text).toContain('nyv_rejected_total{reason="unauthorized"} 1');
-    expect(text).toContain('nyv_perceived_latency_ms{quantile="0.5"} 1100');
-    expect(text).toContain("nyv_perceived_latency_ms_count 4");
+    expect(text).toContain("fyv_sessions_total 2");
+    expect(text).toContain('fyv_rejected_total{reason="unauthorized"} 1');
+    expect(text).toContain('fyv_perceived_latency_ms{quantile="0.5"} 1100');
+    expect(text).toContain("fyv_perceived_latency_ms_count 4");
   });
 });
 

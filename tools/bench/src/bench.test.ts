@@ -1,4 +1,4 @@
-import { MockAsrProvider, MockMtProvider, MockTtsProvider } from "@nyv/providers";
+import { MockAsrProvider, MockMtProvider, MockTtsProvider } from "@fyv/providers";
 import { describe, expect, it } from "vitest";
 import { formatReport, gate, runBench } from "./bench.js";
 

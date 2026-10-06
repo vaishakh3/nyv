@@ -1,4 +1,4 @@
-import type { AsrEvent, AsrProvider, AsrStartOptions, AsrStream } from "@nyv/core";
+import type { AsrEvent, AsrProvider, AsrStartOptions, AsrStream } from "@fyv/core";
 
 /** Picks an ASR provider per source language (e.g. an English-only fast model with a multilingual fallback). */
 export class RoutedAsrProvider implements AsrProvider {

@@ -3,8 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Privacy — nyv</title>
-    <meta name="description" content="What nyv hears, where it goes, and what we keep. Call audio is translated in real time and never stored." />
+    <title>Privacy — fyv</title>
+    <meta name="description" content="What fyv hears, where it goes, and what we keep. Call audio is translated in real time and never stored." />
     <meta name="theme-color" content="#eff1ed" />
     <meta name="robots" content="index,follow" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
@@ -14,9 +14,9 @@
   <body>
     <a class="skip" href="#main">Skip to content</a>
     <header class="nav">
-      <a class="brand" href="/" aria-label="nyv home">
+      <a class="brand" href="/" aria-label="fyv home">
         <svg width="26" height="26" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="14" fill="#15130f"/><g fill="#f7f4ee"><rect x="12" y="23" width="6" height="18" rx="3"/><rect x="21.5" y="16" width="6" height="32" rx="3"/><rect x="36.5" y="16" width="6" height="32" rx="3"/><rect x="46" y="23" width="6" height="18" rx="3"/></g><rect x="29" y="9" width="6" height="46" rx="3" fill="#e2552b"/></svg>
-        <span>nyv</span>
+        <span>fyv</span>
       </a>
       <nav aria-label="Primary">
         <a href="/#how">How it works</a>
@@ -24,20 +24,20 @@
         <a href="/#languages">Languages</a>
         <a href="/#roadmap">Roadmap</a>
       </nav>
-      <a class="btn small" data-store href="https://github.com/vaishakh3/nyv#quick-start" rel="noopener">Get the extension</a>
+      <a class="btn small" data-store href="https://github.com/vaishakh3/fyv#quick-start" rel="noopener">Get the extension</a>
     </header>
 
     <main id="main" class="doc">
       <header class="doc-head">
         <p class="eyebrow">Privacy</p>
-        <h1>What nyv hears, <em>and what it keeps.</em></h1>
-        <p class="lede">nyv translates the speech in a call while it is happening. To do that it has to listen to the call. This page says exactly what that means. Last updated 6 October 2026.</p>
+        <h1>What fyv hears, <em>and what it keeps.</em></h1>
+        <p class="lede">fyv translates the speech in a call while it is happening. To do that it has to listen to the call. This page says exactly what that means. Last updated 6 October 2026.</p>
       </header>
 
       <section>
         <h2>The short version</h2>
         <ul class="facts">
-          <li><b>Audio is translated, not recorded.</b> It streams through our relay to the speech vendors and is discarded as soon as the translated speech has been sent back. nyv keeps no audio and no transcripts.</li>
+          <li><b>Audio is translated, not recorded.</b> It streams through our relay to the speech vendors and is discarded as soon as the translated speech has been sent back. fyv keeps no audio and no transcripts.</li>
           <li><b>Only while you press Translate.</b> Nothing is captured before you start or after you stop. The extension cannot hear your microphone — it listens to the tab you chose.</li>
           <li><b>No accounts, no ads, no analytics.</b> There is no sign-up and no tracking in the extension or on this site.</li>
         </ul>
@@ -45,7 +45,7 @@
 
       <section>
         <h2>What the extension can access</h2>
-        <p>Chrome asks you to grant these permissions when you install nyv. Here is why each one exists.</p>
+        <p>Chrome asks you to grant these permissions when you install fyv. Here is why each one exists.</p>
         <dl class="perms">
           <dt><code>tabCapture</code></dt>
           <dd>Captures the audio of the tab you are translating (your Google Meet call) so it can be sent for translation, and plays the translated speech back into it. Capture starts only when you press <i>Translate</i> and ends when you press <i>Stop</i>, close the tab, or close the popup's session.</dd>
@@ -54,13 +54,13 @@
           <dt><code>storage</code></dt>
           <dd>Remembers your settings: language pair, access code and relay address. These sync with your Chrome profile and never leave Google's sync service or your device otherwise.</dd>
           <dt><code>activeTab</code> and <code>meet.google.com</code></dt>
-          <dd>Lets the popup know which tab you are on, and draws the live captions inside Google Meet. nyv does not read or change anything else on the page.</dd>
+          <dd>Lets the popup know which tab you are on, and draws the live captions inside Google Meet. fyv does not read or change anything else on the page.</dd>
         </dl>
       </section>
 
       <section>
         <h2>Where the audio goes</h2>
-        <p>Audio from the tab is sent over an encrypted WebSocket to the nyv relay (<code>relay.nyv.si</code>, hosted on Fly.io in Mumbai). The relay streams it to three speech vendors, each under their own API terms, and streams the result straight back to you:</p>
+        <p>Audio from the tab is sent over an encrypted WebSocket to the fyv relay (<code>relay.fyv.si</code>, hosted on Fly.io in Mumbai). The relay streams it to three speech vendors, each under their own API terms, and streams the result straight back to you:</p>
         <ol class="chain">
           <li><b>Deepgram</b> — speech recognition (the English words). <a href="https://deepgram.com/privacy" rel="noopener">Policy</a></li>
           <li><b>Groq</b>, with OpenAI as fallback — translation of the recognised text. <a href="https://groq.com/privacy-policy/" rel="noopener">Groq</a> · <a href="https://openai.com/policies/api-data-usage-policies" rel="noopener">OpenAI</a></li>
@@ -76,19 +76,19 @@
 
       <section>
         <h2>Other participants</h2>
-        <p>nyv is installed by the listener. The people you hear are not notified and do not need to install anything, so it is your responsibility to make sure that translating the call is acceptable to them and lawful where you are — the same as for any live captioning or interpretation.</p>
+        <p>fyv is installed by the listener. The people you hear are not notified and do not need to install anything, so it is your responsibility to make sure that translating the call is acceptable to them and lawful where you are — the same as for any live captioning or interpretation.</p>
       </section>
 
       <section>
         <h2>Your choices</h2>
-        <p>Uninstalling the extension removes all of its settings. Because nothing is stored server-side beyond the logs above, there is no account to delete. You can also run your own relay with your own vendor keys — the <a href="https://github.com/vaishakh3/nyv" rel="noopener">source is MIT-licensed</a> — in which case no audio ever reaches us.</p>
-        <p>Questions: <a href="mailto:privacy@nyv.si">privacy@nyv.si</a>. Changes to this page are recorded in the <a href="https://github.com/vaishakh3/nyv/commits/main/apps/web/privacy.html" rel="noopener">repository history</a>.</p>
+        <p>Uninstalling the extension removes all of its settings. Because nothing is stored server-side beyond the logs above, there is no account to delete. You can also run your own relay with your own vendor keys — the <a href="https://github.com/vaishakh3/fyv" rel="noopener">source is MIT-licensed</a> — in which case no audio ever reaches us.</p>
+        <p>Questions: <a href="mailto:privacy@fyv.si">privacy@fyv.si</a>. Changes to this page are recorded in the <a href="https://github.com/vaishakh3/fyv/commits/main/apps/web/privacy.html" rel="noopener">repository history</a>.</p>
       </section>
     </main>
 
     <footer>
-      <span>nyv · <a href="https://nyv.si">nyv.si</a> · <a href="/privacy">Privacy</a></span>
-      <span><a href="https://github.com/vaishakh3/nyv" rel="noopener">GitHub</a> · MIT licence</span>
+      <span>fyv · <a href="https://fyv.si">fyv.si</a> · <a href="/privacy">Privacy</a></span>
+      <span><a href="https://github.com/vaishakh3/fyv" rel="noopener">GitHub</a> · MIT licence</span>
     </footer>
     <script type="module" src="/src/main.ts"></script>
   </body>

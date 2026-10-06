@@ -5,8 +5,8 @@ import {
   type Providers,
   summarize,
   TranslationSession,
-} from "@nyv/core";
-import type { HopTimings, SessionConfig } from "@nyv/protocol";
+} from "@fyv/core";
+import type { HopTimings, SessionConfig } from "@fyv/protocol";
 
 export interface BenchOptions {
   providers: Providers;

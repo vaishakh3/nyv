@@ -1,4 +1,4 @@
-import type { ServerMessage, SessionConfig } from "@nyv/protocol";
+import type { ServerMessage, SessionConfig } from "@fyv/protocol";
 import { describe, expect, it } from "vitest";
 import { ManualClock } from "./clock.js";
 import { wordsFromText } from "./segmenter.js";

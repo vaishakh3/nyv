@@ -1,4 +1,4 @@
-import type { LanguageCode } from "@nyv/protocol";
+import type { LanguageCode } from "@fyv/protocol";
 
 // ---------------- ASR ----------------
 

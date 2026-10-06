@@ -1,5 +1,5 @@
 {
-  "name": "@nyv/providers",
+  "name": "@fyv/providers",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -14,8 +14,8 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@nyv/core": "workspace:*",
-    "@nyv/protocol": "workspace:*"
+    "@fyv/core": "workspace:*",
+    "@fyv/protocol": "workspace:*"
   },
   "devDependencies": {
     "typescript": "^5.7.0",

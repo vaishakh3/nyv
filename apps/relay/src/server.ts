@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { IncomingMessage } from "node:http";
-import type { Providers } from "@nyv/core";
-import { TranslationSession } from "@nyv/core";
+import type { Providers } from "@fyv/core";
+import { TranslationSession } from "@fyv/core";
 import {
   type ClientMessage,
   decodeFrame,
@@ -9,7 +9,7 @@ import {
   FrameKind,
   parseClientMessage,
   type ServerMessage,
-} from "@nyv/protocol";
+} from "@fyv/protocol";
 import { type WebSocket, WebSocketServer } from "ws";
 import { Metrics } from "./metrics.js";
 import type { Quota } from "./quota.js";

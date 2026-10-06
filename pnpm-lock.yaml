@@ -26,10 +26,10 @@ importers:
 
   apps/extension:
     dependencies:
-      '@nyv/audio':
+      '@fyv/audio':
         specifier: workspace:*
         version: link:../../packages/audio
-      '@nyv/protocol':
+      '@fyv/protocol':
         specifier: workspace:*
         version: link:../../packages/protocol
       preact:
@@ -54,13 +54,13 @@ importers:
 
   apps/relay:
     dependencies:
-      '@nyv/core':
+      '@fyv/core':
         specifier: workspace:*
         version: link:../../packages/core
-      '@nyv/protocol':
+      '@fyv/protocol':
         specifier: workspace:*
         version: link:../../packages/protocol
-      '@nyv/providers':
+      '@fyv/providers':
         specifier: workspace:*
         version: link:../../packages/providers
       ws:
@@ -106,7 +106,7 @@ importers:
 
   packages/audio:
     dependencies:
-      '@nyv/protocol':
+      '@fyv/protocol':
         specifier: workspace:*
         version: link:../protocol
     devDependencies:
@@ -122,7 +122,7 @@ importers:
 
   packages/core:
     dependencies:
-      '@nyv/protocol':
+      '@fyv/protocol':
         specifier: workspace:*
         version: link:../protocol
     devDependencies:
@@ -148,10 +148,10 @@ importers:
 
   packages/providers:
     dependencies:
-      '@nyv/core':
+      '@fyv/core':
         specifier: workspace:*
         version: link:../core
-      '@nyv/protocol':
+      '@fyv/protocol':
         specifier: workspace:*
         version: link:../protocol
     devDependencies:
@@ -164,13 +164,13 @@ importers:
 
   tools/bench:
     dependencies:
-      '@nyv/core':
+      '@fyv/core':
         specifier: workspace:*
         version: link:../../packages/core
-      '@nyv/protocol':
+      '@fyv/protocol':
         specifier: workspace:*
         version: link:../../packages/protocol
-      '@nyv/providers':
+      '@fyv/providers':
         specifier: workspace:*
         version: link:../../packages/providers
     devDependencies:

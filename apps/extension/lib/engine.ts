@@ -5,8 +5,8 @@ import {
   type PlaybackWorkletCommand,
   type PlaybackWorkletMessage,
   Resampler,
-} from "@nyv/audio";
-import type { AudioFrame, ServerMessage } from "@nyv/protocol";
+} from "@fyv/audio";
+import type { AudioFrame, ServerMessage } from "@fyv/protocol";
 import { type Caption, IDLE_STATUS, type Settings, type Status } from "./messages.js";
 import { RelayClient, relayUrlWithToken } from "./relay-client.js";
 
@@ -67,11 +67,11 @@ export class Engine {
       this.duckGain = ctx.createGain();
       source.connect(this.duckGain).connect(ctx.destination);
 
-      const capture = new AudioWorkletNode(ctx, "nyv-capture", { numberOfOutputs: 0 });
+      const capture = new AudioWorkletNode(ctx, "fyv-capture", { numberOfOutputs: 0 });
       source.connect(capture);
       capture.port.onmessage = (e: MessageEvent<CaptureWorkletMessage>) => this.onCapture(e.data);
 
-      this.playback = new AudioWorkletNode(ctx, "nyv-playback", {
+      this.playback = new AudioWorkletNode(ctx, "fyv-playback", {
         numberOfInputs: 0,
         outputChannelCount: [1],
       });
@@ -129,7 +129,7 @@ export class Engine {
         await this.openRelay(epoch);
         return;
       } catch (err) {
-        console.warn("[nyv] reconnect failed:", err instanceof Error ? err.message : err);
+        console.warn("[fyv] reconnect failed:", err instanceof Error ? err.message : err);
       }
     }
     if (epoch !== this.epoch) return;
@@ -241,7 +241,7 @@ export class Engine {
         break;
       case "error":
         if (m.fatal) void this.fail(m.message);
-        else console.warn("[nyv] relay:", m.code, m.message);
+        else console.warn("[fyv] relay:", m.code, m.message);
         break;
       case "session.stopped":
         // The server ended the session (limits, idle, shutdown); a dropped socket goes through reconnect instead.

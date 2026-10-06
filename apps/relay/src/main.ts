@@ -1,5 +1,5 @@
 import { createServer, type IncomingMessage } from "node:http";
-import { providersFromEnv } from "@nyv/providers";
+import { providersFromEnv } from "@fyv/providers";
 import { Quota } from "./quota.js";
 import { clientIp, RelayServer } from "./server.js";
 

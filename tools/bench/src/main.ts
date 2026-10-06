@@ -1,9 +1,9 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { parseArgs } from "node:util";
-import type { LatencyReport } from "@nyv/core";
-import { sessionConfig } from "@nyv/protocol";
-import { DEMO_SCRIPT, MockAsrProvider, providersFromEnv } from "@nyv/providers";
+import type { LatencyReport } from "@fyv/core";
+import { sessionConfig } from "@fyv/protocol";
+import { DEMO_SCRIPT, MockAsrProvider, providersFromEnv } from "@fyv/providers";
 import { formatReport, gate, readWav16k, runBench } from "./bench.js";
 
 const { values } = parseArgs({

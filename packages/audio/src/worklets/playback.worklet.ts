@@ -122,4 +122,4 @@ class PlaybackProcessor extends AudioWorkletProcessor {
   }
 }
 
-registerProcessor("nyv-playback", PlaybackProcessor);
+registerProcessor("fyv-playback", PlaybackProcessor);

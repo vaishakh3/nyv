@@ -1,4 +1,4 @@
-import { LANGUAGES, type LanguageCode } from "@nyv/protocol";
+import { LANGUAGES, type LanguageCode } from "@fyv/protocol";
 import { useEffect, useState } from "preact/hooks";
 import { type AccessInfo, checkAccess, describeAccess } from "../../lib/access.js";
 import {
@@ -94,7 +94,7 @@ export function App() {
     <div class="app">
       <header>
         <h1>
-          <span class="logo" /> nyv
+          <span class="logo" /> fyv
         </h1>
         <span class={`pill ${status.state}`}>
           <span class="dot" />
@@ -153,7 +153,7 @@ export function App() {
           Access code
           <input
             value={settings.relayToken}
-            placeholder="from your nyv invite"
+            placeholder="from your fyv invite"
             autocomplete="off"
             spellcheck={false}
             onInput={(e) => update({ relayToken: (e.currentTarget as HTMLInputElement).value })}

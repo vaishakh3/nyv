@@ -1,4 +1,4 @@
-import type { HopTimings } from "@nyv/protocol";
+import type { HopTimings } from "@fyv/protocol";
 import type { Clock } from "./clock.js";
 
 export type Hop = keyof HopTimings;

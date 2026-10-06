@@ -3,8 +3,8 @@ import { describeAccess, quotaUrl } from "./access.js";
 
 describe("access", () => {
   it("derives the quota URL from the relay socket URL", () => {
-    expect(quotaUrl("wss://relay.nyv.si/v1/session", "a b")).toBe(
-      "https://relay.nyv.si/v1/quota?token=a%20b",
+    expect(quotaUrl("wss://relay.fyv.si/v1/session", "a b")).toBe(
+      "https://relay.fyv.si/v1/quota?token=a%20b",
     );
     expect(quotaUrl("ws://localhost:8787/v1/session", "")).toBe("http://localhost:8787/v1/quota");
   });

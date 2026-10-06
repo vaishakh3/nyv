@@ -1,5 +1,5 @@
 {
-  "name": "nyv",
+  "name": "fyv",
   "private": true,
   "version": "0.0.0",
   "description": "Real-time speech-to-speech translation for video calls",
@@ -15,7 +15,7 @@
     "typecheck": "turbo run typecheck",
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
-    "bench": "pnpm --filter @nyv/bench start",
+    "bench": "pnpm --filter @fyv/bench start",
     "check": "pnpm lint && pnpm typecheck && pnpm test"
   },
   "devDependencies": {

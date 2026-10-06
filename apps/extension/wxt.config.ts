@@ -5,9 +5,9 @@ export default defineConfig({
   srcDir: ".",
   outDir: "dist",
   manifest: {
-    name: "nyv – Live Call Translation",
+    name: "fyv – Live Call Translation",
     description: "Hear Google Meet participants in your language, in real time.",
-    homepage_url: "https://nyv.si",
+    homepage_url: "https://fyv.si",
     permissions: ["tabCapture", "offscreen", "storage", "activeTab"],
     host_permissions: ["https://meet.google.com/*"],
     icons: {
@@ -17,11 +17,11 @@ export default defineConfig({
       128: "icons/icon-128.png",
     },
     action: {
-      default_title: "nyv",
+      default_title: "fyv",
       default_icon: { 16: "icons/icon-16.png", 32: "icons/icon-32.png" },
     },
     minimum_chrome_version: "116",
   },
-  zip: { name: "nyv" },
+  zip: { name: "fyv" },
   vite: () => ({ plugins: [preact()] }),
 });
