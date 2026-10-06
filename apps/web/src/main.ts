@@ -15,7 +15,8 @@ const SCRIPT: ReadonlyArray<readonly [string, string, number]> = [
 const src = document.getElementById("src");
 const dst = document.getElementById("dst");
 const lat = document.getElementById("lat");
-const speaker = document.querySelector<HTMLElement>(".tile.speaking");
+const speaker = document.querySelector<HTMLElement>(".tile.t1");
+const mic = speaker?.querySelector<HTMLElement>(".mic");
 const canvas = document.getElementById("wave") as HTMLCanvasElement | null;
 const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
@@ -38,12 +39,14 @@ async function run(): Promise<void> {
   for (;;) {
     for (const [en, hi, ms] of SCRIPT) {
       speaker?.classList.add("speaking");
+      mic?.classList.add("on");
       level = 1;
       const typing = type(src, en, 55);
       await sleep(Math.max(0, en.length * 55 - 300));
       level = 0.35;
       await typing;
       speaker?.classList.remove("speaking");
+      mic?.classList.remove("on");
       level = 0;
       await sleep(ms - 300);
       lat.textContent = `${(ms / 1000).toFixed(2)} s`;
